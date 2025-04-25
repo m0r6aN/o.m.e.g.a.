@@ -1,0 +1,18 @@
+{
+    "workflow_id": "workflow-001",
+    "name": "Customer Purchase Intelligence",
+    "description": "End-to-end pipeline for extracting and cleaning recent customer purchase data",
+    "created_by": "PromptOptimizerAgent",
+    "created_at": "2025-04-19T15:00:00Z",
+    "tasks": [],
+    "context": {
+      "original_prompt": "Find all customers who purchased in the last 30 days and prep their emails for a promo",
+      "optimized_prompt": "Extract customers with purchases in last 30 days. Clean emails. Prepare for campaign outreach."
+    },
+    "status": "PENDING", 
+    "metadata": {
+      "estimated_total_effort": 4.0,
+      "expected_completion_time": 210
+    }
+  }
+  

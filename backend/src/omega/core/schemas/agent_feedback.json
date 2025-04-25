@@ -1,0 +1,15 @@
+{
+    "task_id": "task-2",
+    "agent_id": "DataValidationAgent",
+    "workflow_id": "workflow-001",
+    "confidence_score": 0.92,
+    "disputed": false,
+    "review_required": false,
+    "rationale": "No invalid emails found. Cleaned 12 duplicates across 423 entries.",
+    "suggested_improvements": [
+      "Future: validate domain-level patterns to catch more edge cases.",
+      "Consider deduplicating based on name + email combo."
+    ],
+    "timestamp": "2025-04-19T15:08:35Z"
+  }
+  

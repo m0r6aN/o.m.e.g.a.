@@ -1,0 +1,85 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#f8f9fa" rx="10" ry="10"/>
+  
+  <!-- Title -->
+  <text x="400" y="40" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold">Agent-to-Agent Workflow Architecture</text>
+  
+  <!-- Registry Section -->
+  <rect x="300" y="70" width="200" height="100" fill="#6c8ebf" stroke="#000000" stroke-width="2" rx="5" ry="5" opacity="0.8"/>
+  <text x="400" y="100" font-family="Arial" font-size="18" text-anchor="middle" fill="white" font-weight="bold">Agent Registry</text>
+  <text x="400" y="125" font-family="Arial" font-size="12" text-anchor="middle" fill="white">Discovery Protocol</text>
+  <text x="400" y="145" font-family="Arial" font-size="12" text-anchor="middle" fill="white">Capability Matching</text>
+  <text x="400" y="160" font-family="Arial" font-size="12" text-anchor="middle" fill="white">Heartbeat Monitoring</text>
+  
+  <!-- Orchestrator Agent -->
+  <rect x="300" y="220" width="200" height="80" fill="#d5e8d4" stroke="#000000" stroke-width="2" rx="5" ry="5" opacity="0.8"/>
+  <text x="400" y="250" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Orchestrator Agent</text>
+  <text x="400" y="275" font-family="Arial" font-size="12" text-anchor="middle">Workflow Execution Engine</text>
+  
+  <!-- Workflow Template Registry -->
+  <rect x="550" y="220" width="200" height="80" fill="#ffe6cc" stroke="#000000" stroke-width="2" rx="5" ry="5" opacity="0.8"/>
+  <text x="650" y="250" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Workflow Templates</text>
+  <text x="650" y="275" font-family="Arial" font-size="12" text-anchor="middle">Task Graph Definitions</text>
+  
+  <!-- Specialist Agents -->
+  <rect x="50" y="350" width="150" height="70" fill="#dae8fc" stroke="#000000" stroke-width="2" rx="5" ry="5" opacity="0.8"/>
+  <text x="125" y="380" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Research Agent</text>
+  <text x="125" y="400" font-family="Arial" font-size="12" text-anchor="middle">Information Gathering</text>
+  
+  <rect x="250" y="350" width="150" height="70" fill="#dae8fc" stroke="#000000" stroke-width="2" rx="5" ry="5" opacity="0.8"/>
+  <text x="325" y="380" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Code Agent</text>
+  <text x="325" y="400" font-family="Arial" font-size="12" text-anchor="middle">Development & Optimization</text>
+  
+  <rect x="450" y="350" width="150" height="70" fill="#dae8fc" stroke="#000000" stroke-width="2" rx="5" ry="5" opacity="0.8"/>
+  <text x="525" y="380" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Content Agent</text>
+  <text x="525" y="400" font-family="Arial" font-size="12" text-anchor="middle">Writing & Editing</text>
+  
+  <rect x="650" y="350" width="150" height="70" fill="#dae8fc" stroke="#000000" stroke-width="2" rx="5" ry="5" opacity="0.8"/>
+  <text x="725" y="380" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Data Agent</text>
+  <text x="725" y="400" font-family="Arial" font-size="12" text-anchor="middle">Analysis & Visualization</text>
+  
+  <!-- MCP Layer -->
+  <rect x="50" y="470" width="700" height="50" fill="#e1d5e7" stroke="#000000" stroke-width="2" rx="5" ry="5" opacity="0.8"/>
+  <text x="400" y="500" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Model Computation Protocol (MCP)</text>
+  
+  <!-- Connections -->
+  <!-- Registry to Orchestrator -->
+  <path d="M 400 170 L 400 220" stroke="#000000" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Orchestrator to Workflow Templates -->
+  <path d="M 500 260 L 550 260" stroke="#000000" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Orchestrator to Specialist Agents -->
+  <path d="M 300 300 L 125 350" stroke="#000000" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 350 300 L 325 350" stroke="#000000" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 450 300 L 525 350" stroke="#000000" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 500 300 L 725 350" stroke="#000000" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Agents to MCP -->
+  <path d="M 125 420 L 125 470" stroke="#000000" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 325 420 L 325 470" stroke="#000000" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 525 420 L 525 470" stroke="#000000" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 725 420 L 725 470" stroke="#000000" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Specialist Agents to Registry -->
+  <path d="M 125 350 C 125 270 200 130 300 120" stroke="#000000" stroke-width="2" stroke-dasharray="5,5" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 325 350 C 325 300 350 200 350 170" stroke="#000000" stroke-width="2" stroke-dasharray="5,5" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 525 350 C 525 300 450 200 450 170" stroke="#000000" stroke-width="2" stroke-dasharray="5,5" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 725 350 C 725 270 600 130 500 120" stroke="#000000" stroke-width="2" stroke-dasharray="5,5" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Workflow Execution Labels -->
+  <text x="80" y="550" font-family="Arial" font-size="14" font-weight="bold">Workflow Execution Flow:</text>
+  <text x="100" y="570" font-family="Arial" font-size="12">1. Task submitted to Orchestrator</text>
+  <text x="100" y="590" font-family="Arial" font-size="12">2. Workflow template selected</text>
+  <text x="350" y="570" font-family="Arial" font-size="12">3. Specialist agents discovered & tasked</text>
+  <text x="350" y="590" font-family="Arial" font-size="12">4. Results aggregated & returned</text>
+  
+  <!-- Arrowhead marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+            refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#000000" />
+    </marker>
+  </defs>
+</svg>

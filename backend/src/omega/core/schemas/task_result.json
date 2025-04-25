@@ -1,0 +1,20 @@
+{
+    "task_id": "task-1",
+    "workflow_id": "workflow-001",
+    "executed_by": "ResearchAgent",
+    "tool_used": "sql_query_runner",
+    "started_at": "2025-04-19T15:05:00Z",
+    "completed_at": "2025-04-19T15:07:00Z",
+    "success": true,
+    "output": {
+      "type": "table",
+      "columns": ["email", "purchase_total", "timestamp"],
+      "rows": []
+    },
+    "logs": [
+      "Query executed in 1.9s",
+      "Fetched 423 results from db.customer_purchases"
+    ],
+    "error": null
+  }
+  

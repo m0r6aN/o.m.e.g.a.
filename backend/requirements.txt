@@ -1,0 +1,10 @@
+fastapi>=0.115.12
+uvicorn[standard]>=0.34.0
+redis[hiredis]
+pydantic
+pydantic_settings
+loguru
+websockets
+python-dotenv
+openai
+googletrans

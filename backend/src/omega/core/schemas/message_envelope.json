@@ -1,0 +1,25 @@
+{
+    "header": {
+      "conversation_id": "abc-123",
+      "sender": "workflow_planner",
+      "candidate_agents": ["sql_executor", "finance_agent"],
+      "assigned_agent": "sql_executor",
+      "status": "NEW",
+      "confidence": 0.8,
+      "effort": "MEDIUM",
+      "last_event": "PLAN"
+    },
+    "task": {
+      "id": "task-42",
+      "name": "Run P&L query",
+      "description": "Generate 12‑month P&L for ticker XYZ",
+      "category": "analytics",
+      "required_capabilities": ["sql_execution"],
+      "dependencies": [],
+      "parallelizable": false,
+      "payload": {
+        "sql": "SELECT …"
+      }
+    }
+}
+  
