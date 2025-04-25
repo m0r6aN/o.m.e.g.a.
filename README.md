@@ -1,17 +1,17 @@
 # O.M.E.G.A. – Orchestrated Multi-Expert Gen Agents
 
-**O.M.E.G.A.** is a modular, agent-based framework designed to orchestrate multi-agent reasoning workflows. Leveraging Redis streams for task distribution, Pydantic models for structured data, and OpenAI's Responses API for structured outputs, O.M.E.G.A. integrates the Model Context Protocol (MCP) and Agent2Agent (A2A) protocols to enable seamless agent and tool interoperability.
+**O.M.E.G.A.** is a modular, AI agent-based framework designed to orchestrate multi-agent reasoning workflows. Leveraging Redis streams for task distribution, Pydantic models for structured data, and OpenAI's Responses API for structured outputs, O.M.E.G.A. integrates the Model Context Protocol (MCP) and Agent2Agent (A2A) protocols to enable seamless, model-agnostic, agent and tool interoperability.
 
 ---
 
 ## 🚀 Features
 
-- **Dynamic Task Routing** Tasks are routed to agents based on required capabilities, ensuring optimal handlin.
-- **Structured Task Models** Utilizes Pydantic models (`TaskCore`, `TaskHeader`, `TaskEnvelope`) for clear and consistent task definition.
-- **Agent Communication via Redis** Agents communicate through Redis streams, allowing for scalable and decoupled interaction.
-- **OpenAI Responses API Integration** Structured outputs from OpenAI models are seamlessly integrated using defined schema.
-- **MCP and A2A Protocol Support** Combines MCP for tool integration and A2A for agent-to-agent communication, enabling a flexible and interoperable agent ecosyste.
-- **Provider and Model Agnostic** Agents are designed to work with various models and providers, ensuring flexibility and adaptabilit.
+- **Dynamic Task Routing** Tasks are routed to agents based on required capabilities, ensuring optimal handlin.
+- **Structured Task Models** Utilizes Pydantic models (`TaskCore`, `TaskHeader`, `TaskEnvelope`) for clear and consistent task definition.
+- **Agent Communication via Redis** Agents communicate through Redis streams, allowing for scalable and decoupled interaction.
+- **OpenAI Responses API Integration** Structured outputs from OpenAI models are seamlessly integrated using defined schema.
+- **MCP and A2A Protocol Support** Combines MCP for tool integration and A2A for agent-to-agent communication, enabling a flexible and interoperable agent ecosyste.
+- **Provider and Model Agnostic** Agents are designed to work with various models and providers, ensuring flexibility and adaptabilit.
 
 ---
 
