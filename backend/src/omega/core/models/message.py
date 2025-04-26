@@ -15,12 +15,13 @@ class MessageIntent(str, Enum):
     TOOL_RESPONSE = "tool_response"   # ToolCore responds with tool execution result
     HEARTBEAT = "heartbeat"           # Agent heartbeat signal (internal, might not be a full message)
     SYSTEM = "system"                 # System-level messages (e.g., agent status, errors)
-    ORCHESTRATION = "orchestration"   # Messages related to managing agent interaction (e.g., Grok signals)
+    ORCHESTRATION = "orchestration"   # Messages related to managing agent interaction
+    PROMPT_OPTIMIZATION = "prompt_optimization" # Messages related to prompt optimization
     GENERATE_WORKFLOW = "generate_workflow" 
-    WORKFLOW_STEP = "workflow_step"   # <-- Maybe add for Grok assigning steps?
+    WORKFLOW_STEP = "workflow_step"   
 
 class BaseMessage(BaseModel):
-    type: str = Field(..., description="Message type identifier")
+    type: MessageIntent = Field(..., description="Message type identifier")
     timestamp: datetime.datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="UTC timestamp"
@@ -45,6 +46,13 @@ class Message(BaseMessage):
     intent: MessageIntent = MessageIntent.CHAT
     target_agent: Optional[str] = None # Optional: Direct message to specific agent
     
+class LLM_Response(BaseMessage):
+    """Model for LLM responses."""
+    content: str  # The generated text from the LLM
+    reasoning_effort: ReasoningEffort  # Complexity assessment of the response
+    tools_used: List[str]  # Tools utilized in generating the response
+    references: List[Dict]  # Citations and references
+    
 class AgentMessage(BaseModel):
     """
     Represents a message exchanged between agents in the system.
@@ -61,3 +69,4 @@ class AgentMessage(BaseModel):
     tools_used: List[str]  # Tools utilized in response
     references: List[Dict]  # Citations and references
     timestamp: datetime.datetime
+    

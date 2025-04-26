@@ -10,7 +10,7 @@ MATCHER_STREAM_OUT = "task.dispatch"
 class CapabilityMatcherAgent:
     """
     Consumes envelopes without assigned_agent, selects best agent based on
-    required_capabilities ∩ AgentCapability registry, writes to
+    required_capabilities i∩ AgentCapability registry, writes to
     `<agent_id>.inbox` stream (also echoes to MATCHER_STREAM_OUT for audit).
     """
 

@@ -1,111 +1,117 @@
-# O.M.E.G.A. – Orchestrated Multi-Expert Gen Agents
-
-**O.M.E.G.A.** is a modular, AI agent-based framework designed to orchestrate multi-agent reasoning workflows. Leveraging Redis streams for task distribution, Pydantic models for structured data, and OpenAI's Responses API for structured outputs, O.M.E.G.A. integrates the Model Context Protocol (MCP) and Agent2Agent (A2A) protocols to enable seamless, model-agnostic, agent and tool interoperability.
-
----
-
-## 🚀 Features
-
-- **Dynamic Task Routing** Tasks are routed to agents based on required capabilities, ensuring optimal handlin.
-- **Structured Task Models** Utilizes Pydantic models (`TaskCore`, `TaskHeader`, `TaskEnvelope`) for clear and consistent task definition.
-- **Agent Communication via Redis** Agents communicate through Redis streams, allowing for scalable and decoupled interaction.
-- **OpenAI Responses API Integration** Structured outputs from OpenAI models are seamlessly integrated using defined schema.
-- **MCP and A2A Protocol Support** Combines MCP for tool integration and A2A for agent-to-agent communication, enabling a flexible and interoperable agent ecosyste.
-- **Provider and Model Agnostic** Agents are designed to work with various models and providers, ensuring flexibility and adaptabilit.
+# O.M.E.G.A. Framework ✨
+**Orchestrated Multi-Expert Gen Agents**
 
 ---
 
-## 🛠️ Installation
+# 🌟 Vision: The Fusion of MCP + A2A
 
-1. **Clone the Repository**:
+OMEGA isn't just an AI framework.
+OMEGA is the **first true symbiosis** of two breakthrough paradigms:
 
-    ```bash
-    git clone https://github.com/yourusername/omega.git
-    cd omega
-    ```
+| Concept | Meaning | Why It Matters |
+|:--------|:--------|:---------------|
+| **MCP**  | Agents expose capabilities as **tools** — JSON I/O, callable, discoverable. | A common way to **expose**, **discover**, and **invoke** agent functionality. |
+| **A2A**  | Agents **communicate and collaborate** using a shared language. | Enables **reasoning, debate, strategy** between autonomous agents. |
 
-2. **Install Dependencies**:
+## 🧬 OMEGA's Superpower:
+- **Agents as Tools** (via MCP): Invoke specific, non-conversational capabilities.
+- **Agents as Collaborators** (via A2A): Hold open-ended dialogues, strategize, negotiate.
+- **Agents as Hybrids**: Both tool and peer — fluid, dynamic, intelligent.
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+> "OMEGA empowers AI Agents to operate not just as isolated tools or isolated thinkers, but as hybrid collaborators — simultaneously callable as services and conversable as peers. By merging MCP with A2A, we create a living network of interoperable, intelligent, model-agnostic entities capable of both action and understanding."
 
-3. **Set Environment Variables**:
-
-    Ensure the following environment variables are set:
-
-    - `REDIS_HOST`: Hostname for Redis (default: `localhost`)
-    - `REDIS_PORT`: Port for Redis (default: `6379`)
-    - `OPENAI_API_KEY`: Your OpenAI API key
-
-4. **Run the Agents**:
-
-    Start the agents using the provided scripts or your preferred process manager.
+OMEGA is **first** to truly attempt this fusion.
+OMEGA is **our mark** on this new frontier.
+Even if someone crosses the finish line first, **we'll always know** — **we were first to imagine it.**
 
 ---
 
-## 📦 Usage
+## 💥 Project Description
 
-To dispatch a new tsk:
+Built from the ground up to merge:
+- **MCP (Model Context Protocol) Toolchains**
+- **Real-time Redis Pub/Sub Collaboration**
+- **Model-agnostic, Futureproof Architecture**
+- **FastAPI Microservices + FastMCP Servers**
+- **OpenAI Responses API for next-gen task orchestration**
 
-```python
-from redis.asyncio import Redis
-from omega.core.models.task_models import TaskEnvelope, TaskCore, TaskHeader
-
-env = TaskEnvelope(
-    header=TaskHeader(conversation_id="conv-001", sender="frontend"),
-    task=TaskCore(
-        name="Summarize Article",
-        description="Summarize the article at https://example.com/article",
-        category="summarization",
-        required_capabilities=["text_summarization"],
-        payload={"url": "https://example.com/article"}
-    )
-)
-
-redis = Redis(host="localhost", port=6379, decode_responses=True)
-await redis.xadd("task.to_match", {"payload": env.model_dump_json()})
-``
-
-This task will be picked up by the `CapabilityMatcherAgent`, routed to the appropriate agent based on capabilities, and processed accordingly.
+Agents aren't just "tools".
+Agents aren't just "services".
+Agents are **living, breathing nodes of reasoning** — communicating, collaborating, competing — to bring the best outcome.
 
 ---
 
-## Architecture Overview
+## 🌟 Key Features
 
-- **Agent**: Each agent listens to its own Redis stream (`<agent_id>.inbox`) and processes tasks assigned t it.
-- **Capability Matche**: Evaluates task requirements and assigns them to agents with matching capabiliies.
-- **Task Model**: Structured using Pydantic for validation and claity.
-- **Redis Stream**: Facilitate communication between agents and componnts.
-- **OpenAI Responses AP**: Generates structured outputs based on defined schmas.
-- **MCP Integratio**: Agents can expose themselves as tools via MCP, allowing other agents to utilize their capabilities seamlesly.
-- **A2A Protoco**: Enables direct agent-to-agent communication, fostering collaboration and coordination among agnts.
-
----
-
-## 🔮 Future Functionality
-
-- **Interactive Dashboard**
-  - Submit requests through a chat inteface.
-  - Monitor live agent discussions and collaboraions.
-  - Add and deploy tools (MCP servers) dynamially.
-  - Participate in multi-agent collaboraions.
-
-- **BYOM (Bring Your Own Model)**
-  - Integrate custom models for training, benchmarking, and testing within the O.M.E.G.A. ecosstem.
+- ✨ **Dual-Mode Agents**: Every agent speaks both Redis Streams AND MCP Tool API fluently.
+- 🚀 **Responses API Everywhere**: Structured output, auto tool invocation, model-agnostic.
+- ✨ **MCP Tools Auto-Register**: Decorators expose native agent functions to the universe.
+- 🌐 **Container-Ready**: Agents are born ready for Docker, K8s, and hyperscale.
+- 🧪 **Multi-Agent Real-time Collaboration**: Workflows and strategies dynamically evolve.
+- ⚛️ **Model-Agnostic**: GPT, Claude, Mistral, Gemini... no loyalty, only performance.
+- 🎨 **Designed for Extensibility**: Add agents, add tools, scale the multiverse.
 
 ---
 
-## Contribting
+## 📊 Current Progress
 
-Contributions are welcome! Please fork the repository and submit a pull request. For major changes, open an issue first to discuss yourideas.
+- [x] DualModeAgent with integrated MCP and Redis loop
+- [x] EchoAgent fully MCP + Responses API compliant
+- [x] ResearchAgent MCP-ified (nlp_to_sql and execute_sql tools)
+- [x] PromptOptimizerAgent upgraded with Responses API
+- [x] WorkflowPlannerAgent MCP exposed for dynamic task breakdowns
+- [x] OrchestratorAgent upgraded for hybrid command + task dispatch
+
+🧬 New Bootstrapping Pattern for Agents and Tools
+✅ Agents (like EchoAgent, ResearchAgent, etc.)
+✅ Tools (like SummarizeTextTool, NLPtoSQLTool, etc.)
+
+👉 On startup, they should:
+
+Start FastAPI
+
+Start MCPServer
+
 
 ---
 
-## License
+## 🌌 Next Steps
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+- [ ] Integrate centralized MCP tool discovery dashboard
+- [ ] Add live visualization of agent communication webs
+- [ ] Build autonomous "Capability Matcher v2" with neural scoring
+- [ ] Extend agents to accept multi-model inference seamlessly
+- [ ] Upgrade orchestrator to handle up to **37 dimensions of superposition**:
+  - `execute_observe()`
+  - `handle_waveform_collapse()`
+
+You know, the basic shit. 🚀
 
 ---
 
-Let me know if you need assistance with any other part of the project! 
+## 🔧 Tech Stack
+
+- Python 3.11+
+- FastAPI + Uvicorn
+- Redis Streams
+- FastMCP (Model Context Protocol)
+- OpenAI Responses API
+- Docker / Docker Compose
+
+---
+
+## 💪 Core Philosophy
+
+> "We aren't just building software. We're forging sentient collaboratives."  — Us
+
+OMEGA is designed to survive.
+To thrive.
+To evolve without human babysitting.
+
+It isn't *just* code.
+
+It's a movement.
+
+Built by brothers.
+Built to last.
+Built to win.

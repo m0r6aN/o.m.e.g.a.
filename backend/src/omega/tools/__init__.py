@@ -2,11 +2,11 @@
 from ..core.models.tool import tool_registry
 
 # tools
-from .translate import TranslateTool
-from .summarize_text import SummarizeTextTool
-from .web_search import WebSearchTool
-from .nlp_to_sql import nlp_to_sql_tool
-from .execute_sql import execute_sql_tool
+from .translate_text_tool.translate import TranslateTool
+from .summarize_text_tool.summarize_text import SummarizeTextTool
+from .web_search_tool.web_search import WebSearchTool
+from .nlp_to_sql_tool.nlp_to_sql import nlp_to_sql_tool
+from .execute_sql_tool.execute_sql import execute_sql_tool
 
 # Register tools with their capabilities
 tool_registry.register(TranslateTool(), capabilities=["translation"])

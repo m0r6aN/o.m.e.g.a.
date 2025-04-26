@@ -1,17 +1,24 @@
-
 import os
 from datetime import datetime, timezone
-from backend.src.omega.agents.dual_mode_base import DualModeAgent
-from omega.tools.nlp_to_sql import nlp_to_sql_tool
-from omega.tools.execute_sql import execute_sql_tool
+from fastmcp.decorators import tool
+from omega.agents.dual_mode_base_mcpserver import DualModeAgent
+from backend.src.omega.tools.nlp_to_sql_tool.nlp_to_sql import nlp_to_sql_tool
+from backend.src.omega.tools.execute_sql_tool.execute_sql import execute_sql_tool
+
+@tool
+def nlp_to_sql(input_data: dict) -> dict:
+    return nlp_to_sql_tool(input_data)
+
+@tool
+def execute_sql(input_data: dict) -> dict:
+    return execute_sql_tool(input_data)
 
 class ResearchAgent(DualModeAgent):
     def __init__(self):
         super().__init__(
             agent_id="ResearchAgent",
-            redis_channel=os.getenv("REDIS_CHANNEL_RESEARCH", "agent:ResearchAgent"),
-            result_channel=os.getenv("REDIS_CHANNEL_ORCHESTRATE", "orchestrator_dispatch_channel"),
-            tool_name="research"
+            tool_name="research",
+            mcp_tools=[nlp_to_sql, execute_sql]
         )
 
     async def handle_task(self, task: dict) -> dict:
@@ -36,5 +43,5 @@ class ResearchAgent(DualModeAgent):
         }
 
 if __name__ == "__main__":
-    print("🔬 ResearchAgent online (DualMode)")
+    print("🔬 ResearchAgent online (DualMode + MCPServer)")
     ResearchAgent().run()

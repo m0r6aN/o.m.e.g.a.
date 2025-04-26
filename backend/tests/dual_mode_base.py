@@ -1,26 +1,27 @@
+# backend/src/omega/agents/dual_mode_agent.py
 import os, asyncio, json, uvicorn, uuid
-from typing import Any, List
+from typing import Any
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 from contextlib import asynccontextmanager
 
-from fastmcp import MCPServer
-from omega.core.models.task_models import TaskEnvelope
+from backend.src.omega.core.models.task_models import TaskEnvelope
+
 
 class DualModeAgent:
     """
-    Base class: every agent owns its own Redis stream <agent_id>.inbox.
+    Base class: every agent owns its own Redis stream `<agent_id>.inbox`.
     Orchestrator/CapabilityMatcher writes TaskEnvelope objects there.
     """
 
     STREAM_KEY_TEMPLATE = "{agent_id}.inbox"
-    RESULT_STREAM = "task.events"
+    RESULT_STREAM = "task.events"          # central multiplexed event log
 
-    def __init__(self, agent_id: str, tool_name: str, mcp_tools: List = None):
+    def __init__(self, agent_id: str, tool_name: str):
         self.agent_id = agent_id
-        self.tool_name = tool_name
         self.stream_key = self.STREAM_KEY_TEMPLATE.format(agent_id=agent_id)
+        self.tool_name = tool_name
         self.redis: Redis = Redis(
             host=os.getenv("REDIS_HOST", "redis"),
             port=int(os.getenv("REDIS_PORT", 6379)),
@@ -30,15 +31,19 @@ class DualModeAgent:
         self._setup_routes()
         self.app.router.lifespan_context = self._lifespan
 
-        # 🧠 Updated MCPServer initialization
-        self.mcp = MCPServer(agent_name=agent_id, tools=mcp_tools or [])
+        # 🧠 FastMCP integration
+        from fastmcp import FastMCP
+        self.mcp = FastMCP(agent_id)
+    
 
+    # ------------------ FastAPI endpoint -------------------------------------
     def _setup_routes(self):
         @self.app.post(f"/tools/{self.tool_name}")
         async def tool_endpoint(payload: Any):
             result = await self.handle_task(payload)
             return JSONResponse(content=result)
 
+    # ------------------ lifecycle --------------------------------------------
     @asynccontextmanager
     async def _lifespan(self, _app):
         await self._verify_connection()
@@ -53,13 +58,14 @@ class DualModeAgent:
         except Exception as e:
             print(f"❌ Redis connection failed: {e}")
 
+    # ------------------ pub‑sub via streams ----------------------------------
     async def _consume_stream(self):
         group = f"{self.agent_id}-grp"
         consumer = f"{self.agent_id}-{uuid.uuid4().hex[:6]}"
         try:
             await self.redis.xgroup_create(self.stream_key, group, mkstream=True)
         except Exception:
-            pass
+            pass  # already exists
 
         print(f"🔊 {self.agent_id} listening on stream {self.stream_key}…")
         while True:
@@ -87,16 +93,24 @@ class DualModeAgent:
     async def _publish_event(self, env: TaskEnvelope):
         await self.redis.xadd(self.RESULT_STREAM, {"payload": env.model_dump_json()})
 
+    # ------------------ to be implemented ------------------------------------
+    async def handle_task(self, env: TaskEnvelope) -> TaskEnvelope:
+        raise NotImplementedError
+
+    # ------------------ blocking run -----------------------------------------
+    def register_tool(self, func):
+        """
+        Register a tool function with the FastMCP instance.
+        """
+        return self.mcp.tool()(func)
+
     async def _run_mcp_server(self):
         try:
             mcp_port = int(os.getenv("MCP_PORT", 9000))
-            print(f"🔌 Starting MCPServer on port {mcp_port} for {self.agent_id}")
-            await self.mcp.serve("0.0.0.0", mcp_port)
+            print(f"🔌 Starting MCP server on port {mcp_port} for {self.agent_id}")
+            await self.mcp.run(port=mcp_port)
         except Exception as e:
             print(f"❌ MCP server failed for {self.agent_id}: {e}")
-
-    async def handle_task(self, env: TaskEnvelope) -> TaskEnvelope:
-        raise NotImplementedError
 
     def run(self):
         uvicorn.run(self.app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

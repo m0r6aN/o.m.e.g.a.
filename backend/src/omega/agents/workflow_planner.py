@@ -1,51 +1,58 @@
 import os
 import json
 import uuid
+import asyncio
 import openai
 from datetime import datetime, timezone
-
+from fastmcp.decorators import tool
 from omega.core.models.task_models import TaskCore, TaskHeader, TaskStatus, TaskEnvelope, TaskEvent
-from omega.agents.dual_mode_base import DualModeAgent
+from omega.agents.dual_mode_base_mcpserver import DualModeAgent
 from omega.core.utils.task_utils import identify_parallel_groups, calculate_critical_path
+
+@tool
+def plan_workflow(prompt: str) -> dict:
+    return asyncio.run(WorkflowPlannerAgent._plan_static(prompt))
 
 class WorkflowPlannerAgent(DualModeAgent):
     def __init__(self):
         super().__init__(
             agent_id="workflow_planner",
-            tool_name="plan_workflow"
+            tool_name="plan_workflow",
+            mcp_tools=[plan_workflow]
         )
         self.client = openai.OpenAI()
+
+    @staticmethod
+    async def _plan_static(prompt: str) -> dict:
+        client = openai.OpenAI()
+        schema_block = TaskCore.model_json_schema(indent=2)
+        planning_prompt = (
+            "You are a Process Optimization Engine. Your goal is to break down complex processes "
+            "into well-structured, optimized tasks that conform exactly to the provided Task schema.\n\n"
+            "Return the tasks as a JSON object with a single field called 'tasks'.\n\n"
+            f"Here is the Task schema definition (Pydantic-compliant):\n{json.dumps(schema_block, indent=2)}\n\n"
+            f"Process to optimize: {prompt}"
+        )
+
+        response = await client.responses.create(
+            model="gpt-4o",
+            input=planning_prompt,
+            response_format=schema_block,
+            temperature=0.3,
+            max_tokens=2000
+        )
+
+        return json.loads(response.output_text)
 
     async def handle_task(self, env: TaskEnvelope) -> TaskEnvelope:
         optimized_prompt = env.task.payload.get("optimized_prompt", env.task.description)
         workflow_id = env.task.id or str(uuid.uuid4())
 
         try:
-            # Describe the desired output format
-            schema_block = TaskCore.model_json_schema(indent=2)
-            prompt = (
-                "You are a Process Optimization Engine. Your goal is to break down complex processes "
-                "into well-structured, optimized tasks that conform exactly to the provided Task schema.\n\n"
-                "Return the tasks as a JSON object with a single field called 'tasks'.\n\n"
-                "Here is the Task schema definition (Pydantic-compliant):\n"
-                f"```json\n{schema_block}\n```\n\n"
-                f"Process to optimize: {optimized_prompt}"
-            )
-            
-            # Create a response with structured output
-            response = self.client.responses.create(
-                model="gpt-o3",
-                input=prompt,
-                response_format=TaskEnvelope.model_json_schema(indent=2),
-                temperature=0.3,
-                max_tokens=2000
-            )
-
-            tasks = json.loads(response["choices"][0]["message"]["content"])["tasks"]
+            tasks = (await self._plan_static(optimized_prompt))["tasks"]
             parallel_groups = identify_parallel_groups(tasks)
             critical_path = calculate_critical_path(tasks)
 
-            # Emit each TaskCore as its own envelope
             for task_dict in tasks:
                 new_task = TaskCore(
                     id=task_dict["id"],
@@ -74,10 +81,8 @@ class WorkflowPlannerAgent(DualModeAgent):
                     task=new_task
                 )
 
-                # Send to matcher stream for capability routing
                 await self.redis.xadd("task.to_match", {"payload": child_env.model_dump_json()})
 
-            # Return original env with status updated
             env.header.last_event = TaskEvent.COMPLETE
             env.header.status = TaskStatus.COMPLETED
             return env
@@ -89,7 +94,6 @@ class WorkflowPlannerAgent(DualModeAgent):
             env.task.payload["error"] = str(e)
             return env
 
-
 if __name__ == "__main__":
-    print("🧠 WorkflowPlannerAgent online (DualMode)")
+    print("🧩 WorkflowPlannerAgent online (DualMode + MCPServer + Responses API)")
     WorkflowPlannerAgent().run()

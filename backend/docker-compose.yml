@@ -1,95 +1,54 @@
-
 services:
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 2s
-      retries: 10
-
   echo_agent:
-    build:
-      context: ../  # assumes this file is in backend/
-      dockerfile: backend/docker/agent.Dockerfile
-    working_dir: /app/backend/src
-    volumes:
-      - "D:/Repos/o.m.e.g.a/backend/src:/app/backend/src"
+    build: ./agents/echo_agent
+    ports:
+      - "8001:8000"
+      - "9001:9000" # MCP Server port
     environment:
-      AGENT_ID: echo
-      REDIS_CHANNEL_RESPONSES: responses_channel
-      REDIS_CHANNEL_RESULTS: results_channel
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-    command: python -m omega.agents.echo
+      - MCP_PORT=9000
+      - PORT=8000
+      - REGISTRY_URL=http://registry_service:8500
     depends_on:
-      "redis":
-        condition: service_healthy
-
-  prompt_optimizer_agent:
-    build:
-      context: ../
-      dockerfile: backend/docker/agent.Dockerfile
-    working_dir: /app/backend/src
-    volumes:
-      - "D:/Repos/o.m.e.g.a/backend/src:/app/backend/src"
-    environment:
-      REDIS_CHANNEL_PROMPT: prompt_channel
-      REDIS_CHANNEL_PLAN: workflow_plan_channel
-    command: python -m omega.agents.prompt_optimizer
-    depends_on:
-      "redis":
-        condition: service_healthy
-
-  capability_matcher_agent:
-    build:
-      context: ../
-      dockerfile: backend/docker/agent.Dockerfile
-    working_dir: /app/backend/src
-    volumes:
-      - "D:/Repos/o.m.e.g.a/backend/src:/app/backend/src"
-    environment:
-      REDIS_CHANNEL_WORKFLOW: workflow_dispatch_channel
-      REDIS_CHANNEL_ORCHESTRATE: orchestrator_dispatch_channel
-    command: python -m omega.agents.capability_matcher
-    depends_on:
-      "redis":
-        condition: service_healthy
+      - redis
+      - registry_service
 
   research_agent:
-    build:
-      context: ../
-      dockerfile: backend/docker/agent.Dockerfile
-    working_dir: /app/backend/src
-    volumes:
-      - "D:/Repos/o.m.e.g.a/backend/src:/app/backend/src"
+    build: ./agents/research_agent
+    ports:
+      - "8002:8000"
+      - "9002:9000"
     environment:
-      REDIS_CHANNEL_RESEARCH: agent:ResearchAgent
-      REDIS_CHANNEL_ORCHESTRATE: orchestrator_dispatch_channel
-    command: python -m omega.agents.research
+      - MCP_PORT=9000
+      - PORT=8000
+      - REGISTRY_URL=http://registry_service:8500
     depends_on:
-      "redis":
-        condition: service_healthy
+      - redis
+      - registry_service
 
-  workflow_planner_agent:
-    build:
-      context: ../
-      dockerfile: backend/docker/agent.Dockerfile
-    working_dir: /app/backend/src
-    volumes:
-      - "D:/Repos/o.m.e.g.a/backend/src:/app/backend/src"
+  summarize_tool:
+    build: ./tools/summarize_text_tool
+    ports:
+      - "8011:8000"
+      - "9011:9000"
     environment:
-      REDIS_CHANNEL_PLAN: workflow_plan_channel
-      REDIS_CHANNEL_DISPATCH: workflow_dispatch_channel
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-    command: python -m omega.agents.workflow_planner_agent
+      - MCP_PORT=9000
+      - PORT=8000
+      - REGISTRY_URL=http://registry_service:8500
     depends_on:
-      "redis":
-        condition: service_healthy
+      - redis
+      - registry_service
 
-networks:
-  default:
-    name: omega_network
+  registry_service:
+    build: ./services/registry_service
+    ports:
+      - "8500:8500"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
 
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
