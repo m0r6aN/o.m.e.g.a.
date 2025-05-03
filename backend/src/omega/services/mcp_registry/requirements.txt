@@ -1,0 +1,9 @@
+# registry/requirements.txt
+fastapi
+uvicorn
+pydantic
+pymongo
+aiohttp
+pyyaml
+redis
+python-dotenv

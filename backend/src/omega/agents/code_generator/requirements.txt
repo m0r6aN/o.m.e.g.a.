@@ -1,0 +1,10 @@
+# agents/code_generator/requirements.txt
+fastapi>=0.100.0
+uvicorn>=0.23.0
+redis>=4.6.0
+pydantic>=2.0.0
+aiohttp>=3.8.5
+python-a2a>=0.1.0
+fastmcp>=0.1.0
+asyncio>=3.4.3
+openai>=1.0.0

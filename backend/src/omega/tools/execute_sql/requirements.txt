@@ -1,0 +1,7 @@
+# tools/calculator/requirements.txt
+fastapi
+uvicorn
+pydantic
+fastmcp
+numpy
+python-dotenv

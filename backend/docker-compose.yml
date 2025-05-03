@@ -1,54 +1,470 @@
 services:
-  echo_agent:
-    build: ./agents/echo_agent
+  # Core Services
+  registry:
+    build:
+      context: ./src/omega/services/registry_service
+      dockerfile: Dockerfile
     ports:
-      - "8001:8000"
-      - "9001:9000" # MCP Server port
+      - "9401:9401"
     environment:
-      - MCP_PORT=9000
-      - PORT=8000
-      - REGISTRY_URL=http://registry_service:8500
+      - PORT=9401
+      - MONGODB_URL=mongodb://mongo:27017/
+      - MONGODB_NAME=agent_registry
+      - LOG_LEVEL=info
     depends_on:
-      - redis
-      - registry_service
+      - mongo
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9401/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
-  research_agent:
-    build: ./agents/research_agent
-    ports:
-      - "8002:8000"
-      - "9002:9000"
-    environment:
-      - MCP_PORT=9000
-      - PORT=8000
-      - REGISTRY_URL=http://registry_service:8500
-    depends_on:
-      - redis
-      - registry_service
-
-  summarize_tool:
-    build: ./tools/summarize_text_tool
-    ports:
-      - "8011:8000"
-      - "9011:9000"
-    environment:
-      - MCP_PORT=9000
-      - PORT=8000
-      - REGISTRY_URL=http://registry_service:8500
-    depends_on:
-      - redis
-      - registry_service
-
-  registry_service:
-    build: ./services/registry_service
-    ports:
-      - "8500:8500"
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - redis
+  mongo:
+    image: mongo:latest
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   redis:
-    image: redis:7
+    image: redis:latest
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Agents
+  orchestrator:
+    build:
+      context: ./src/omega/agents/orchestrator
+      dockerfile: Dockerfile
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - PORT=9000
+      - MCP_PORT=9001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REGISTRY_URL=http://registry:9401
+      - HOST=orchestrator
+      - LOG_LEVEL=info
+    depends_on:
+      - registry
+      - redis
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  math_solver:
+    build:
+      context: ./src/omega/agents/math_solver
+      dockerfile: Dockerfile
+    ports:
+      - "9002:9002"
+      - "9003:9003"
+    environment:
+      - PORT=9002
+      - MCP_PORT=9003
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REGISTRY_URL=http://registry:9401
+      - HOST=math_solver
+      - LOG_LEVEL=info
+    depends_on:
+      - registry
+      - redis
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  workflow_planner:
+    build:
+      context: ./src/omega/agents/workflow_planner
+      dockerfile: Dockerfile
+    ports:
+      - "9004:9004"
+      - "9005:9005"
+    environment:
+      - PORT=9004
+      - MCP_PORT=9005
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REGISTRY_URL=http://registry:9401
+      - HOST=workflow_planner
+      - LOG_LEVEL=info
+    depends_on:
+      - registry
+      - redis
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9004/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  prompt_optimizer:
+    build:
+      context: ./src/omega/agents/prompt_optimizer
+      dockerfile: Dockerfile
+    ports:
+      - "9006:9006"
+      - "9007:9007"
+    environment:
+      - PORT=9006
+      - MCP_PORT=9007
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REGISTRY_URL=http://registry:9401
+      - HOST=prompt_optimizer
+      - LOG_LEVEL=info
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - registry
+      - redis
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9006/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  capability_matcher:
+    build:
+      context: ./src/omega/agents/capability_matcher
+      dockerfile: Dockerfile
+    ports:
+      - "9008:9008"
+      - "9009:9009"
+    environment:
+      - PORT=9008
+      - MCP_PORT=9009
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REGISTRY_URL=http://registry:9401
+      - HOST=capability_matcher
+      - LOG_LEVEL=info
+    depends_on:
+      - registry
+      - redis
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9008/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  research:
+    build:
+      context: ./src/omega/agents/research
+      dockerfile: Dockerfile
+    ports:
+      - "9010:9010"
+      - "9011:9011"
+    environment:
+      - PORT=9010
+      - MCP_PORT=9011
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REGISTRY_URL=http://registry:9401
+      - HOST=research
+      - LOG_LEVEL=info
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - registry
+      - redis
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9010/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  weather:
+    build:
+      context: ./src/omega/agents/weather
+      dockerfile: Dockerfile
+    ports:
+      - "9012:9012"
+      - "9013:9013"
+    environment:
+      - PORT=9012
+      - MCP_PORT=9013
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REGISTRY_URL=http://registry:9401
+      - HOST=weather
+      - LOG_LEVEL=info
+      - WEATHER_API_KEY=${WEATHER_API_KEY}
+    depends_on:
+      - registry
+      - redis
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9012/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  code_generator:
+  build:
+    context: .
+    dockerfile: src/omega/agents/code_generator/Dockerfile
+  environment:
+    - PORT=8000
+    - MCP_PORT=9000
+    - REDIS_HOST=redis
+    - REDIS_PORT=6379
+    - REGISTRY_URL=http://registry:8080
+    - OPENAI_API_KEY=${OPENAI_API_KEY}
+  ports:
+    - "8007:8000"  # Adjust port as needed
+    - "9007:9000"  # Adjust port as needed
+  depends_on:
+    - redis
+    - registry
+  networks:
+    - agent_network
+
+  # Add to your docker-compose.yml
+project_architect:
+  build:
+    context: .
+    dockerfile: src/omega/agents/project_architect/Dockerfile
+  environment:
+    - PORT=8000
+    - MCP_PORT=9000
+    - REDIS_HOST=redis
+    - REDIS_PORT=6379
+    - REGISTRY_URL=http://registry:8080
+    - OPENAI_API_KEY=${OPENAI_API_KEY}
+  ports:
+    - "8008:8000"  # Adjust port as needed
+    - "9008:9000"  # Adjust port as needed
+  depends_on:
+    - redis
+    - registry
+  networks:
+    - agent_network
+
+  # Tools
+  execute_sql:
+    build:
+      context: ./src/omega/tools/execute_sql
+      dockerfile: Dockerfile
+    ports:
+      - "9201:9201"
+    environment:
+      - PORT=9201
+      - REGISTRY_URL=http://registry:9401
+      - HOST=execute_sql
+      - LOG_LEVEL=info
+    depends_on:
+      - registry
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9201/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  calculator:
+    build:
+      context: ./src/omega/tools/calculator
+      dockerfile: Dockerfile
+    ports:
+      - "9202:9202"
+    environment:
+      - PORT=9202
+      - REGISTRY_URL=http://registry:9401
+      - HOST=calculator
+      - LOG_LEVEL=info
+    depends_on:
+      - registry
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9202/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  nlp_to_sql:
+    build:
+      context: ./src/omega/tools/nlp_to_sql
+      dockerfile: Dockerfile
+    ports:
+      - "9203:9203"
+    environment:
+      - PORT=9203
+      - REGISTRY_URL=http://registry:9401
+      - HOST=nlp_to_sql
+      - LOG_LEVEL=info
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - registry
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9203/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  summarize_text:
+    build:
+      context: ./src/omega/tools/summarize_text
+      dockerfile: Dockerfile
+    ports:
+      - "9204:9204"
+    environment:
+      - PORT=9204
+      - REGISTRY_URL=http://registry:9401
+      - HOST=summarize_text
+      - LOG_LEVEL=info
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - registry
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9204/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  translate_text:
+    build:
+      context: ./src/omega/tools/translate_text
+      dockerfile: Dockerfile
+    ports:
+      - "9205:9205"
+    environment:
+      - PORT=9205
+      - REGISTRY_URL=http://registry:9401
+      - HOST=translate_text
+      - LOG_LEVEL=info
+    depends_on:
+      - registry
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9205/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web_search:
+    build:
+      context: ./src/omega/tools/web_search
+      dockerfile: Dockerfile
+    ports:
+      - "9206:9206"
+    environment:
+      - PORT=9206
+      - REGISTRY_URL=http://registry:9401
+      - HOST=web_search
+      - LOG_LEVEL=info
+      - SEARCH_API_KEY=${SEARCH_API_KEY}
+    depends_on:
+      - registry
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9206/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # UI
+  ui:
+    build:
+      context: ./src/omega/ui
+      dockerfile: Dockerfile
+    ports:
+      - "9601:9601"
+    environment:
+      - PORT=9601
+      - REGISTRY_URL=http://registry:9401
+      - ORCHESTRATOR_URL=http://orchestrator:9000
+      - HOST=0.0.0.0
+      - LOG_LEVEL=info
+    depends_on:
+      - registry
+      - orchestrator
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9601/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  omega_network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  redis_data:

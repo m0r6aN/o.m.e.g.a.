@@ -1,0 +1,12 @@
+# agents/math_solver/requirements.txt
+fastapi
+uvicorn
+redis
+pydantic
+aiohttp
+python-a2a
+fastmcp
+asyncio
+python-dotenv
+numpy
+sympy # Symbolic mathematics

@@ -18,24 +18,67 @@ D:\Repos\o.m.e.g.a/
 │   │       ├── agents
 │   │       │   D:\Repos\o.m.e.g.a\backend\src\omega\agents/
 │   │       │   ├── __init__.py
-│   │       │   ├── agent_base.py
-│   │       │   ├── capability_matcher.py
-│   │       │   ├── coder.py
-│   │       │   ├── content.py
-│   │       │   ├── echo.py
-│   │       │   ├── instructions.txt
-│   │       │   ├── orchestrator.py
-│   │       │   ├── prompt_optimizer.py
-│   │       │   ├── repository.py
-│   │       │   ├── research.py
-│   │       │   ├── task.py
-│   │       │   ├── workflow_composer.py
-│   │       │   └── workflow_planner_agent.py
+│   │       │   ├── capability_matcher
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\capability_matcher/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── agent.py
+│   │       │   │   └── requirements.txt
+│   │       │   ├── code_generator
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\code_generator/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── agent.py
+│   │       │   │   └── requirements.txt
+│   │       │   ├── devops_discovery
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\devops_discovery/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── agent.py
+│   │       │   │   └── requirements.txt
+│   │       │   ├── math_solver
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\math_solver/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── agent.py
+│   │       │   │   └── requirements.txt
+│   │       │   ├── moderator
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\moderator/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── agent.py
+│   │       │   │   └── requirements.txt
+│   │       │   ├── orchestrator
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\orchestrator/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── agent.py
+│   │       │   │   └── requirements.txt
+│   │       │   ├── project_architect
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\project_architect/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── agent.py
+│   │       │   │   └── requirements.txt
+│   │       │   ├── prompt_optimizer
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\prompt_optimizer/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── agent.py
+│   │       │   │   └── requirements.txt
+│   │       │   ├── research
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\research/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── agent.py
+│   │       │   │   └── requirements.txt
+│   │       │   ├── weather
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\weather/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── agent.py
+│   │       │   │   └── requirements.txt
+│   │       │   └── workflow_planner
+│   │       │       D:\Repos\o.m.e.g.a\backend\src\omega\agents\workflow_planner/
+│   │       │       ├── Dockerfile
+│   │       │       ├── agent.py
+│   │       │       └── requirements.txt
 │   │       ├── cli
 │   │       │   D:\Repos\o.m.e.g.a\backend\src\omega\cli/
 │   │       ├── core
 │   │       │   D:\Repos\o.m.e.g.a\backend\src\omega\core/
 │   │       │   ├── __init__.py
+│   │       │   ├── agent_discovery.py
 │   │       │   ├── communication
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\core\communication/
 │   │       │   │   ├── bus.py
@@ -43,6 +86,7 @@ D:\Repos\o.m.e.g.a/
 │   │       │   │   ├── redis_client.py
 │   │       │   │   └── websocket_server.py
 │   │       │   ├── config.py
+│   │       │   ├── dual_mode_agent.py
 │   │       │   ├── factories
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\core\factories/
 │   │       │   │   ├── __init__.py
@@ -57,14 +101,22 @@ D:\Repos\o.m.e.g.a/
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\core\models/
 │   │       │   │   ├── __init__.py
 │   │       │   │   ├── capabilities.py
-│   │       │   │   └── models.py
+│   │       │   │   ├── message.py
+│   │       │   │   ├── reasoning.py
+│   │       │   │   ├── system.py
+│   │       │   │   ├── task_models.py
+│   │       │   │   ├── tool.py
+│   │       │   │   └── websocket.py
 │   │       │   ├── orchestrator
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\core\orchestrator/
 │   │       │   │   ├── Dockerfile
 │   │       │   │   └── requirements.txt
+│   │       │   ├── registerable_dual_mode_agent.py
+│   │       │   ├── registerable_mcp_tool.py
 │   │       │   ├── schemas
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\core\schemas/
 │   │       │   │   ├── agent_feedback.json
+│   │       │   │   ├── message_envelope.json
 │   │       │   │   ├── task_result.json
 │   │       │   │   └── workflow_schema.json
 │   │       │   ├── schemas.py
@@ -72,39 +124,267 @@ D:\Repos\o.m.e.g.a/
 │   │       │       D:\Repos\o.m.e.g.a\backend\src\omega\core\utils/
 │   │       │       ├── __init__.py
 │   │       │       ├── event_schema.py
+│   │       │       ├── mcp_tool_builder.py
+│   │       │       ├── port_manger.py
 │   │       │       ├── redis_listener.py
 │   │       │       ├── redis_watcher.py
+│   │       │       ├── registry_helpers.py
 │   │       │       └── task_utils.py
-│   │       ├── registry
-│   │       │   D:\Repos\o.m.e.g.a\backend\src\omega\registry/
-│   │       │   ├── agent_discovery_protocol.py
-│   │       │   ├── api.py
-│   │       │   ├── heartbeat.py
-│   │       │   ├── storage.py
-│   │       │   └── tool_registry.py
+│   │       ├── services
+│   │       │   D:\Repos\o.m.e.g.a\backend\src\omega\services/
+│   │       │   ├── agent_registry
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\services\agent_registry/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── requirements.txt
+│   │       │   │   └── service.py
+│   │       │   ├── collaborative_workflow_generator
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\services\collaborative_workflow_generator/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── requirements.txt
+│   │       │   │   └── service.py
+│   │       │   ├── mcp_registry
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\services\mcp_registry/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── requirements.txt
+│   │       │   │   └── service
+│   │       │   └── template_discovery
+│   │       │       D:\Repos\o.m.e.g.a\backend\src\omega\services\template_discovery/
+│   │       │       ├── Dockerfile
+│   │       │       ├── requirements.txt
+│   │       │       └── service.py
 │   │       ├── tools
 │   │       │   D:\Repos\o.m.e.g.a\backend\src\omega\tools/
 │   │       │   ├── __init__.py
-│   │       │   ├── base.py
-│   │       │   ├── execute_sql.py
-│   │       │   ├── nlp_to_sql.py
-│   │       │   ├── summarize_text.py
-│   │       │   ├── translate.py
-│   │       │   └── web_search.py
+│   │       │   ├── calculator
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\tools\calculator/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── requirements.txt
+│   │       │   │   └── tool.py
+│   │       │   ├── execute_sql
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\tools\execute_sql/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── requirements.txt
+│   │       │   │   └── tool.py
+│   │       │   ├── nlp_to_sql
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\tools\nlp_to_sql/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── requirements.txt
+│   │       │   │   └── tool.py
+│   │       │   ├── summarize_text
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\tools\summarize_text/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── requirements.txt
+│   │       │   │   └── tool.py
+│   │       │   ├── translate_text
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\tools\translate_text/
+│   │       │   │   ├── Dockerfile
+│   │       │   │   ├── requirements.txt
+│   │       │   │   └── tool.py
+│   │       │   └── web_search
+│   │       │       D:\Repos\o.m.e.g.a\backend\src\omega\tools\web_search/
+│   │       │       ├── Dockerfile
+│   │       │       ├── requirements.txt
+│   │       │       └── tool.py
+│   │       ├── ui
+│   │       │   D:\Repos\o.m.e.g.a\backend\src\omega\ui/
+│   │       │   ├── Dockerfile
+│   │       │   ├── app.py
+│   │       │   └── requirements.txt
 │   │       └── workflows
 │   │           D:\Repos\o.m.e.g.a\backend\src\omega\workflows/
+│   │           ├── template_repository.py
+│   │           ├── templates
+│   │           │   D:\Repos\o.m.e.g.a\backend\src\omega\workflows\templates/
+│   │           │   ├── README.md
+│   │           │   └── database_driven_website.yaml
+│   │           ├── workflow_template.py
+│   │           └── workflow_templates.py
 │   ├── tests
 │   │   D:\Repos\o.m.e.g.a\backend\tests/
 │   │   ├── __init__.py
+│   │   ├── agent_inbox_test.py
+│   │   ├── dual_mode_base.py
+│   │   ├── e2e_test_orchestrator.py
+│   │   ├── e2e_trigger.py
+│   │   ├── redis_test.py
 │   │   ├── run_finance_agent.py
 │   │   ├── run_research_agent.py
-│   │   └── run_triage_agent_flow.py
-├── docker
-│   D:\Repos\o.m.e.g.a\docker/
-│   ├── agent.Dockerfile
-│   ├── orchestrator.Dockerfile
-│   └── tool.Dockerfile
+│   │   ├── run_triage_agent_flow.py
+│   │   └── test_capability_matching.py
 ├── docs
 │   D:\Repos\o.m.e.g.a\docs/
-├── infra
-│   D:\Repos\o.m.e.g.a\infra/
+│   ├── bootstrap.md
+│   ├── docker-containers.md
+│   ├── dual_mode_agent_readme.md
+│   ├── instructions.txt
+│   ├── mcp-integration-guide.md
+│   ├── omega-next-steps.md
+│   └── tool_builder_pattern.md
+├── frontend
+│   D:\Repos\o.m.e.g.a\frontend/
+│   ├── OMEGA UI_README.md
+│   ├── components.json
+│   ├── next.config.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── public
+│   │   D:\Repos\o.m.e.g.a\frontend\public/
+│   │   ├── icons
+│   │   │   D:\Repos\o.m.e.g.a\frontend\public\icons/
+│   │   └── images
+│   │       D:\Repos\o.m.e.g.a\frontend\public\images/
+│   ├── scripts
+│   │   D:\Repos\o.m.e.g.a\frontend\scripts/
+│   │   └── setup-env.js
+│   ├── setup.ps1
+│   ├── src
+│   │   D:\Repos\o.m.e.g.a\frontend\src/
+│   │   ├── app
+│   │   │   D:\Repos\o.m.e.g.a\frontend\src\app/
+│   │   │   ├── agents
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\agents/
+│   │   │   │   ├── [id]
+│   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\agents\[id]/
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── create
+│   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\agents\create/
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── api
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api/
+│   │   │   │   ├── agents
+│   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\agents/
+│   │   │   │   │   ├── [id]
+│   │   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\agents\[id]/
+│   │   │   │   │   │   ├── route.ts
+│   │   │   │   │   │   ├── start
+│   │   │   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\agents\[id]\start/
+│   │   │   │   │   │   │   └── route.ts
+│   │   │   │   │   │   ├── stop
+│   │   │   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\agents\[id]\stop/
+│   │   │   │   │   │   │   └── route.ts
+│   │   │   │   │   │   └── tasks
+│   │   │   │   │   │       D:\Repos\o.m.e.g.a\frontend\src\app\api\agents\[id]\tasks/
+│   │   │   │   │   │       └── route.ts
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── tools
+│   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\tools/
+│   │   │   │   │   ├── [id]
+│   │   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\tools\[id]/
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── call
+│   │   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\tools\call/
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── workflows
+│   │   │   │       D:\Repos\o.m.e.g.a\frontend\src\app\api\workflows/
+│   │   │   │       └── route.ts
+│   │   │   ├── dashboard
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\dashboard/
+│   │   │   │   ├── layout.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── globals.css
+│   │   │   ├── layout.tsx
+│   │   │   ├── login
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\login/
+│   │   │   ├── page.tsx
+│   │   │   ├── register
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\register/
+│   │   │   ├── settings
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\settings/
+│   │   │   │   ├── appearance
+│   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\settings\appearance/
+│   │   │   │   └── profile
+│   │   │   │       D:\Repos\o.m.e.g.a\frontend\src\app\settings\profile/
+│   │   │   ├── tools
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\tools/
+│   │   │   │   ├── [id]
+│   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\tools\[id]/
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── create
+│   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\tools\create/
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── page.tsx
+│   │   │   └── workflows
+│   │   │       D:\Repos\o.m.e.g.a\frontend\src\app\workflows/
+│   │   │       ├── [id]
+│   │   │       │   D:\Repos\o.m.e.g.a\frontend\src\app\workflows\[id]/
+│   │   │       └── create
+│   │   │           D:\Repos\o.m.e.g.a\frontend\src\app\workflows\create/
+│   │   ├── components
+│   │   │   D:\Repos\o.m.e.g.a\frontend\src\components/
+│   │   │   ├── agents
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\components\agents/
+│   │   │   │   ├── agent-create.tsx
+│   │   │   │   ├── agent-detail.tsx
+│   │   │   │   ├── agent-list.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── dashboard
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\components\dashboard/
+│   │   │   ├── layout
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\components\layout/
+│   │   │   │   ├── sidebar.tsx
+│   │   │   │   └── theme-toggle.tsx
+│   │   │   ├── tools
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\components\tools/
+│   │   │   │   ├── tool-caller.tsx
+│   │   │   │   ├── tool-detail.tsx
+│   │   │   │   ├── tool-list.tsx
+│   │   │   │   ├── tool-register.tsx
+│   │   │   │   └── tool-tabs
+│   │   │   │       D:\Repos\o.m.e.g.a\frontend\src\components\tools\tool-tabs/
+│   │   │   │       ├── capabilities-tab.tsx
+│   │   │   │       ├── index.ts
+│   │   │   │       ├── overview-tab.tsx
+│   │   │   │       ├── settings-tab.tsx
+│   │   │   │       └── usage-tab.tsx
+│   │   │   ├── ui
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\components\ui/
+│   │   │   │   ├── accordion.tsx
+│   │   │   │   ├── alert-dialog.tsx
+│   │   │   │   ├── badge.tsx
+│   │   │   │   ├── button.tsx
+│   │   │   │   ├── card.tsx
+│   │   │   │   ├── checkbox.tsx
+│   │   │   │   ├── dialog.tsx
+│   │   │   │   ├── dropdown-menu.tsx
+│   │   │   │   ├── form.tsx
+│   │   │   │   ├── input.tsx
+│   │   │   │   ├── label.tsx
+│   │   │   │   ├── scroll-area.tsx
+│   │   │   │   ├── select.tsx
+│   │   │   │   ├── skeleton.tsx
+│   │   │   │   ├── tabs.tsx
+│   │   │   │   ├── textarea.tsx
+│   │   │   │   └── tooltip.tsx
+│   │   │   ├── visualizations
+│   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\components\visualizations/
+│   │   │   │   ├── agent-network-graph.tsx
+│   │   │   │   └── network-graph.tsx
+│   │   │   └── workflows
+│   │   │       D:\Repos\o.m.e.g.a\frontend\src\components\workflows/
+│   │   │       ├── index.ts
+│   │   │       ├── nodes
+│   │   │       │   D:\Repos\o.m.e.g.a\frontend\src\components\workflows\nodes/
+│   │   │       │   ├── agent-node.tsx
+│   │   │       │   ├── base-node.tsx
+│   │   │       │   ├── index.ts
+│   │   │       │   ├── tool-node.tsx
+│   │   │       │   └── trigger-node.tsx
+│   │   │       └── workflow-builder.tsx
+│   │   ├── hooks
+│   │   │   D:\Repos\o.m.e.g.a\frontend\src\hooks/
+│   │   │   └── use-mcp.ts
+│   │   ├── providers
+│   │   │   D:\Repos\o.m.e.g.a\frontend\src\providers/
+│   │   │   ├── agent-provider.tsx
+│   │   │   ├── query-provider.tsx
+│   │   │   └── theme-provider.tsx
+│   │   └── types
+│   │       D:\Repos\o.m.e.g.a\frontend\src\types/
+│   │       └── index.ts
+│   ├── tailwind.config.js
+│   └── tsconfig.json
+├── index.html
+└── temp.py

@@ -1,0 +1,8 @@
+# agents/capability_matcher/requirements.txt
+fastapi
+uvicorn
+redis
+pydantic
+aiohttp
+asyncio
+python-dotenv

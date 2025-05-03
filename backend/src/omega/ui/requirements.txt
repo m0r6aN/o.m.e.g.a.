@@ -1,0 +1,8 @@
+# ui/requirements.txt
+gradio
+aiohttp
+pydantic
+fastapi
+uvicorn
+python-dotenv
+jinja2

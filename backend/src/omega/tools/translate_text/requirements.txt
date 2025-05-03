@@ -1,0 +1,8 @@
+# tools/translate_text/requirements.txt
+fastapi
+uvicorn
+pydantic
+fastmcp
+langdetect
+googletrans
+python-dotenv

@@ -1,12 +1,13 @@
 [project]
 name = "omega"
 version = "0.1.0"
-description = "Add your description here"
+description = "O.M.E.G.A."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "mcp[cli]>=1.6.0",
-    "openai-agents>=0.0.11",
-    "python-a2a>=0.5.0",
-    "redis>=5.2.1",
+    "mcp[cli]",
+    "openai>=1.75.0",
+    "openai-agents",
+    "python-a2a",
+    "redis",
 ]

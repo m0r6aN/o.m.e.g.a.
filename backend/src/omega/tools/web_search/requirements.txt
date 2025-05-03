@@ -1,0 +1,7 @@
+# tools/web_search/requirements.txt
+fastapi
+uvicorn
+pydantic
+fastmcp
+numpy
+python-dotenv

@@ -1,0 +1,57 @@
+template_id: db_website_full_stack
+name: "Database-Driven Website Full Stack"
+description: "Complete workflow for creating a database-driven website from requirements to deployment"
+agents:
+  - id: project_architect
+    role: architecture_design
+    stage: 1
+  - id: code_generator
+    role: implementation
+    stage: 2
+  - id: devops_discovery
+    role: deployment
+    stage: 3
+execution_flow:
+  - stage: 1
+    steps:
+      - action: "design_architecture"
+        input_from: "user_requirements"
+        output_to: "architecture_spec"
+      - action: "plan_project_structure"
+        input_from: "architecture_spec"
+        output_to: "project_structure"
+  - stage: 2
+    steps:
+      - action: "generate_backend"
+        input_from: ["architecture_spec", "project_structure"]
+        output_to: "backend_code"
+      - action: "generate_frontend"
+        input_from: ["architecture_spec", "project_structure"]
+        output_to: "frontend_code"
+      - action: "generate_database"
+        input_from: ["architecture_spec"]
+        output_to: "database_schema"
+  - stage: 3
+    steps:
+      - action: "provision_infrastructure"
+        input_from: ["architecture_spec", "backend_code", "frontend_code"]
+        output_to: "infrastructure_config"
+      - action: "create_deployment_pipeline"
+        input_from: ["backend_code", "frontend_code", "infrastructure_config"]
+        output_to: "deployment_pipeline"
+parameters:
+  - name: "frontend_framework"
+    default: "react"
+    options: ["react", "vue", "angular"]
+  - name: "backend_language"
+    default: "python"
+    options: ["python", "node", "java", "go"]
+  - name: "database_type"
+    default: "postgresql"
+    options: ["postgresql", "mysql", "mongodb"]
+improvement_metrics:
+  - execution_time
+  - success_rate
+  - user_satisfaction
+last_updated: "2025-04-20"
+version: 1.2

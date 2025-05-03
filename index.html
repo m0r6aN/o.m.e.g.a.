@@ -1,0 +1,495 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title></title>
+</head>
+<style type="text/css">
+    body {
+        background: transparent;
+        margin: 0;
+        padding: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 13px;
+    }
+
+    a {
+        color: #227fff;
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    table,
+    td,
+    th {
+        margin: 0;
+        border: 0;
+        padding: 0;
+        border-spacing: 0;
+        border-collapse: collapse;
+        empty-cells: show;
+        text-align: left;
+    }
+
+    table {
+        width: 100%;
+    }
+
+    table td {
+        vertical-align: top;
+        padding: 0.5em;
+    }
+
+    thead {
+        display: table-row-group
+    }
+
+    .exportProfileContent {
+        font-family: Arial, Helvetica, sans-serif;
+        background: transparent;
+        overflow: visible;
+        margin: 10px 0 0 0;
+        padding: 0 20px;
+    }
+
+    .leftColumn {
+        clear: both;
+        float: left;
+        width: 40%;
+        padding: 0 7px 0 0;
+        margin: 10px 0 3px 0;
+        box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        text-align: right;
+    }
+
+    .rightColumn {
+        float: left;
+        position: relative;
+        width: 60%;
+        padding: 0 0 0 7px;
+        margin: 10px 0 3px 0;
+        box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        text-align: left;
+    }
+
+    .leftColumn .description {
+        margin: 1px 0 0 0;
+        padding: 0;
+        color: #9f9f9f;
+        font-size: 0.9em;
+    }
+
+    .rightColumn .value.attachment img,
+    .rightColumn .value.jobAttachment img {
+        max-width: 100%;
+        margin-bottom: 12px;
+    }
+
+    .fieldTitle {
+        color: #000;
+        font-size: 0.923em;
+        font-weight: 600;
+    }
+
+    .fieldTitle:after {
+        content: ":"
+    }
+
+    .fieldTitle.emptyValue:after {
+        content: ""
+    }
+
+    .fieldValue {
+        font-weight: normal;
+        color: #222;
+        font-size: 0.923em;
+    }
+
+    .view-document_viewer {
+        width: 100%;
+        height: 800px;
+        min-height: 70vh;
+        display: block;
+    }
+
+    .view-item__label {
+        margin: 0;
+        font-size: 1em;
+        display: inline-block;
+        vertical-align: top;
+        font-weight: 600;
+    }
+
+    .view-item__label--fullname {
+        margin: 0 0 5px 0;
+        font-size: 1.750em;
+        color: #000;
+        font-weight: 700;
+        width: 100%;
+    }
+
+    .view-item__value {
+        font-size: 1em;
+        display: inline-block;
+        margin-left: 5px;
+        vertical-align: top;
+    }
+
+    .view-item__value--title-and-source {
+        font-weight: normal;
+        font-size: 1.167em;
+        color: #000;
+        width: 100%;
+        margin-top: 10px;
+        margin-left: 0;
+    }
+
+    .view-item--separator .view-item__label {
+        width: 100%;
+        display: block;
+    }
+
+    .view-item.view-item--separator {
+        border-bottom: 1px solid #c8c8c8;
+    }
+
+    .view-item.view-item--separator .view-item__description {
+        padding-bottom: 5px;
+    }
+
+    .view-item__description {
+        color: #9f9f9f;
+        margin: 0;
+    }
+
+    .view-item+.view-item {
+        margin-top: 20px;
+    }
+
+    .view-item--attachmentField .view-item__value {
+        display: block;
+        width: 100%;
+    }
+
+    .videoContainer {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .video {
+        max-width: 100%;
+        max-height: 100%;
+    }
+
+    .text {
+        clear: both;
+    }
+
+    .text .descValue {
+        font-size: 14px;
+        font-weight: normal;
+        color: #666;
+        margin: 0px;
+    }
+
+    hr.separatorView {
+        border: none;
+        border-bottom: 2px dotted #AFB8C1;
+    }
+
+    .profilePicture {
+        width: 80px;
+        height: 80px;
+    }
+
+    .exportProfileContent .MultipleDataSetFields {
+        margin-top: -2px;
+        margin-bottom: 0px;
+        list-style-type: none;
+        padding-left: 0px;
+    }
+
+    /* Table/* Table tableField */
+    .tableField th,
+    .tableField td {
+        padding: 0.5em;
+    }
+
+    .tableField th {
+        background-color: #eee;
+        font-weight: bold;
+    }
+
+    .tableField tr {
+        border-bottom: 1px solid #ccc;
+    }
+
+    .tableField tr:first-child {
+        border-top: 1px solid #ccc;
+    }
+
+    /* Table tableField */
+    .tableField th,
+    .tableField td {
+        padding: 0.5em;
+    }
+
+    .tableField th {
+        background-color: #eee;
+        font-weight: bold;
+    }
+
+    .tableField tr {
+        border-bottom: 1px solid #ccc;
+    }
+
+    .tableField tr:first-child {
+        border-top: 1px solid #ccc;
+    }
+
+    .tableField th,
+    .tableField td {
+        padding: 0.5em;
+    }
+
+    .tableField th {
+        background-color: #eee;
+        font-weight: bold;
+    }
+
+    .tableField tr {
+        border-bottom: 1px solid #ccc;
+    }
+
+    .tableField tr:first-child {
+        border-top: 1px solid #ccc;
+    }
+
+    /* Default Schema/Form */
+    table.schemaspec td {
+        vertical-align: top;
+        padding: 0.5em;
+        max-width: 150px;
+        word-wrap: break-word;
+        border-left: 1px solid #ccc;
+    }
+
+    /* Table form_{n} by column */
+    .schemaspec th,
+    .schemaspec td {
+        padding: 0.5em;
+    }
+
+    .schemaspec th:last-child,
+    .schemaspec td:last-child {
+        border-right: 1px solid #ccc;
+    }
+
+    .schemaspec th {
+        background-color: #ededed;
+        font-weight: 600;
+        border-left: 1px solid #ccc;
+    }
+
+    .schemaspec tr {
+        border-bottom: 1px solid #ccc;
+    }
+
+    .schemaspec tr:first-child {
+        border-top: 1px solid #ccc;
+    }
+
+    /* Table form_{n} by row */
+    .schemaspec.schemaspecByRow td {
+        padding: 0.5em;
+    }
+
+    .schemaspec.schemaspecByRow tr {
+        border-bottom: 1px solid #ccc;
+        border-right: 1px solid #ccc;
+        border-left: 1px solid #ccc;
+    }
+
+    .schemaspec.schemaspecByRow tr:first-child {
+        border-top: 1px solid #ccc;
+    }
+
+    .schemaspec.schemaspecByRow td:first-child {
+        background-color: #eee;
+        font-weight: bold;
+    }
+
+    .clear {
+        clear: both;
+    }
+</style>
+
+<body>
+    <div class="exportProfileContent">
+        <div class="view-item">
+            <h1 class="view-item__label view-item__label--fullname"></h1>
+            <div class="view-item__value view-item__value--title-and-source"></div>
+            <div class="view-item__value"></div>
+        </div>
+        <div class="view-item">
+            <h3 class="view-item__label">&nbsp;</h3>
+            <div class="view-item__value">Solutions Architect</div>
+            <p class="view-item__description"></p>
+        </div>
+        <div class="view-item">
+            <h3 class="view-item__label">&nbsp;</h3>
+            <div class="view-item__value">
+                <p>
+                    <font face="arial" size="4"><strong>Your Job</strong></font>
+                </p>
+                <p>
+                    <font face="arial" size="2">Georgia-Pacific’s Software Engineering &amp; Integration (SE&amp;I) team
+                        is looking for a&nbsp;<strong>Solutions Architect&nbsp;</strong>to join the team. In this role,
+                        you will collaborate with SE&amp;I engineers and architects globally to create engineering
+                        standards that maximize the division of labor, allowing engineers to focus on their core
+                        strengths. This approach aims to boost efficiency and deliver higher returns through innovative
+                        technology solutions. The Solutions Architect will also develop technical and architectural
+                        roadmaps to modernize our legacy technology and drive transformational change. Additionally, you
+                        will work with multifunctional teams to provide solutioning services and create reference
+                        architectures based on successful solutions to address business challenges.</font>
+                </p>
+                <p>
+                    <font face="arial" size="2"><strong>Location</strong>: This is a hybrid role based out of our GP
+                        Headquarters in Atlanta, GA.</font>
+                </p>
+                <div><br></div>
+                <p>
+                    <font face="arial" size="4"><strong>Our Team</strong></font>
+                </p>
+                <p>
+                    <font face="arial" size="2">GP’s Software Engineering &amp; Integration team’s core competency is
+                        designing, building, delivering, and maintaining custom software solutions. We recently
+                        initiated our transformation journey, creating functions and capabilities that enable engineers
+                        to have major impacts on GP’s business performance. We seek to build functionality once, so
+                        engineers are encouraged to re-use their peers’ work and modify then scale it to meet new use
+                        cases. We focus on delivering profitable business outcomes by partnering with business analysts,
+                        delivery leaders, and quality engineers to build the right solution at the right speed.</font>
+                </p>
+                <p>
+                    <font face="arial" size="4"><br></font>
+                </p>
+                <p>
+                    <font face="arial" size="4"><strong>What You Will Do</strong></font>
+                </p>
+                <ul>
+                    <li>
+                        <font face="arial" size="2">Participate and self-drive thought leadership in overall application
+                            and integration strategy efforts while partnering with IT leaders across the company.</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Define a menu of tech-stacks and engineering standards while
+                            understanding how cloud architecture impacts cost to run.</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Understanding the architecture of our applications; developing
+                            roadmaps that proactively addresses technical debt and modernizing our infrastructure that
+                            is aligned with our engineering standards.</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Conduct experiments to prove out modern technical solutions.</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Develop reference architecture, design patterns, and boilerplates
+                            that provide guidelines and best practices for engineers, thus, freeing them to focus on
+                            delivering value.</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Partner with the engineers by helping them implement these best
+                            practices and drive standardization of technologies and tools to achieve enterprise
+                            simplification and re-use.</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Participate in the talent selection process for architects within
+                            the team.</font>
+                    </li>
+                </ul>
+                <div><br></div>
+                <p>
+                    <font face="arial" size="4"><strong>Who You Are (Basic Qualifications)</strong></font>
+                </p>
+                <ul>
+                    <li>
+                        <font face="arial" size="2">Experience as a Solutions Architect, championing a new enterprise
+                            middleware platform within the organization; developing strategies, best practices,
+                            repeatable patterns, and other engineering standards</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Leadership experience influencing C-suite, other key stakeholders,
+                            and/or engineers</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Hands on experience and expertise in multiple middleware platforms
+                            utilizing various integration patterns such as event-driven, hub-and-spoke,
+                            publish-subscribe, and streaming.</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Understanding of security best practices and compliance
+                            requirements, including knowledge of encryption, authentication, authorization, and data
+                            privacy</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Understanding of security standards including SAML, XACML, MASSL,
+                            OATH, WSTrust, OAUTH, OpenID Connect&nbsp;</font>
+                    </li>
+                </ul>
+                <div><br></div>
+                <p>
+                    <font face="arial" size="4"><strong>What Will Put You Ahead</strong></font>
+                </p>
+                <ul>
+                    <li>
+                        <font face="arial" size="2">Proficient in at least 2 of the following middleware platforms:
+                            Mulesoft, SAP-CPI, Infor Ion, or another industry-leading middleware platform</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Proficient in at least 2 of the following API Management tools: AWS
+                            Gateway, Apigee, Kong, or another industry-leading management tool</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Proficient in at least 2 of the following Streaming Platforms:
+                            Kafka, Kinesis, NATS, or another industry streaming solution</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Proficient in the following programming languages: Python and GoLang
+                        </font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Experience with various industrial protocols used for communication
+                            and data transfer in industrial environments, including MQTT, OPC-UA, MODBUS, etc.</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Experience in agile methodologies</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Experience with EDI platforms (Sterling Commerce, OpenText, etc.)
+                            and standards (ANSI X12, EDIFACT, etc.)</font>
+                    </li>
+                    <li>
+                        <font face="arial" size="2">Background in restful API development using C# or similar language
+                        </font>
+                    </li>
+                </ul>
+                <div><br></div>
+                <p>
+                    <font face="arial" size="2"><em>At Koch companies, we are entrepreneurs. This means we openly
+                            challenge the status quo, find new ways to create value and get rewarded for our individual
+                            contributions. Any compensation range provided for a role is an estimate determined by
+                            available market data. The actual amount may be higher or lower than the range provided
+                            considering each candidate's knowledge, skills, abilities, and geographic location. If you
+                            have questions, please speak to your recruiter about the flexibility and detail of our
+                            compensation philosophy.</em></font>
+                </p>
+</body>
+
+</html>
