@@ -1,274 +1,281 @@
 // src/app/api/workflows/route.ts
-import { WorkflowExecution } from '@/lib/workflow/client';
-import { WorkflowNode } from '@/lib/workflow/types';
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  Workflow,
+  WorkflowNode,
+  WorkflowEdge,
+  WorkflowExecution as ClientWorkflowExecution, // Renaming to avoid conflict with local var
+  StepResult,
+  WorkflowNodeData,
+  //WorkflowTemplate as ClientWorkflowTemplate, // Using the one from types.ts
+} from '@/lib/workflow/types'; // Centralized types
+import { MarkerType, Position } from 'reactflow';  // For default edge properties
 
-// Sample data for testing
-const sampleWorkflows: WorkflowNode[] = [
+// Define a specific type for the nodes within a BackendWorkflowTemplate
+interface BackendWorkflowTemplateNode {
+  type: WorkflowNode['type']; // 'agentNode' | 'toolNode' | 'triggerNode' | 'outputNode'
+  data: Partial<WorkflowNodeData> & { label: string; entityId?: string }; // label is required, entityId often too
+  positionHint?: { x: number; y: number };
+  // Add any other properties from WorkflowNode (except id, position) that you want to allow in a template node.
+  // For example, if you want to specify default width/height:
+  // width?: number;
+  // height?: number;
+}
+
+// Define a more specific template type for backend use
+interface BackendWorkflowTemplate {
+  id: string;
+  name: string;
+  description: string;
+  nodes: BackendWorkflowTemplateNode[]; // Use the new specific type here
+  edges: Omit<WorkflowEdge, 'id' | 'source' | 'target'> & {
+    sourceIndex: number; // Changed to required for clarity
+    targetIndex: number; // Changed to required for clarity
+  }[];
+  tags: string[];
+}
+
+// Sample data for testing - conforming to Workflow interface
+const sampleWorkflows: Workflow[] = [
   {
     id: 'wf-123',
-    name: 'Research and Analysis',
-    description: 'A workflow for collecting and analyzing information on a topic',
-    status: 'active',
-    steps: [
+    name: 'Research and Reporting Workflow',
+    description: 'Automates research, analysis, and report generation.',
+    nodes: [
       {
-        id: 'step-1',
-        name: 'Research Task',
-        description: 'Gather information from external sources',
-        type: 'agent',
-        target_id: 'research_agent',
-        dependencies: [],
-        parameters: { query: 'Query parameter will be provided at runtime' }
+        id: 'trigger-1', type: 'triggerNode', position: { x: 50, y: 50 },
+        data: { label: 'User Query', entityId: 'user_input', status: 'pending' }
       },
       {
-        id: 'step-2',
-        name: 'Analyze Results',
-        description: 'Analyze the gathered information',
-        type: 'agent',
-        target_id: 'analyzer_agent',
-        dependencies: ['step-1'],
-        parameters: {}
+        id: 'agent-1', type: 'agentNode', position: { x: 250, y: 50 },
+        data: { label: 'Research Agent', entityId: 'research_agent_id', capability: 'web_search', params: { query: 'placeholder' }, status: 'pending' }
       },
       {
-        id: 'step-3',
-        name: 'Generate Report',
-        description: 'Create a summary report',
-        type: 'agent',
-        target_id: 'report_generator_agent',
-        dependencies: ['step-2'],
-        parameters: { format: 'markdown' }
-      }
+        id: 'agent-2', type: 'agentNode', position: { x: 500, y: 50 },
+        data: { label: 'Analyzer Agent', entityId: 'analyzer_agent_id', status: 'pending' }
+      },
+      {
+        id: 'output-1', type: 'outputNode', position: { x: 750, y: 50 },
+        data: { label: 'Generate Report', entityId: 'user_response', status: 'pending' }
+      },
     ],
-    created_at: '2025-04-15T10:30:00Z',
-    updated_at: '2025-04-15T14:45:00Z',
-    tags: ['research', 'analysis', 'automation'],
+    edges: [
+      { id: 'e-trigger-1-agent-1', source: 'trigger-1', target: 'agent-1', type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed }, animated: true },
+      { id: 'e-agent-1-agent-2', source: 'agent-1', target: 'agent-2', type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed }, animated: true },
+      { id: 'e-agent-2-output-1', source: 'agent-2', target: 'output-1', type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed }, animated: true },
+    ],
+    createdAt: '2025-04-15T10:30:00Z',
+    updatedAt: '2025-04-15T14:45:00Z',
+    status: 'active',
   },
   {
     id: 'wf-456',
-    name: 'Code Review Pipeline',
-    description: 'Automated workflow for reviewing and improving code submissions',
-    status: 'draft',
-    steps: [
+    name: 'Code Review Workflow',
+    description: 'Automates static analysis and code review.',
+    nodes: [
       {
-        id: 'step-1',
-        name: 'Static Analysis',
-        description: 'Perform static code analysis on submitted code',
-        type: 'tool',
-        target_id: 'static_analyzer_tool',
-        dependencies: [],
-        parameters: {}
+        id: 'trigger-code-1', type: 'triggerNode', position: { x: 50, y: 150 },
+        data: { label: 'Code Commit', entityId: 'webhook', status: 'pending' }
       },
       {
-        id: 'step-2',
-        name: 'AI Code Review',
-        description: 'Review code with AI assistance',
-        type: 'agent',
-        target_id: 'code_review_agent',
-        dependencies: ['step-1'],
-        parameters: {}
+        id: 'tool-code-1', type: 'toolNode', position: { x: 250, y: 150 },
+        data: { label: 'Static Analyzer', entityId: 'static_analyzer_tool_id', capability: 'analyze_code', status: 'pending' }
       },
       {
-        id: 'step-3',
-        name: 'Generate Improvement Suggestions',
-        description: 'Provide concrete improvement suggestions',
-        type: 'agent',
-        target_id: 'code_improvement_agent',
-        dependencies: ['step-2'],
-        parameters: {}
-      }
+        id: 'agent-code-1', type: 'agentNode', position: { x: 500, y: 150 },
+        data: { label: 'Code Review Agent', entityId: 'code_review_agent_id', status: 'pending' }
+      },
+      {
+        id: 'output-code-1', type: 'outputNode', position: { x: 750, y: 150 },
+        data: { label: 'Review Result', entityId: 'webhook', status: 'pending' }
+      },
     ],
-    created_at: '2025-04-10T09:15:00Z',
-    updated_at: '2025-04-12T16:20:00Z',
-    tags: ['code', 'review', 'development'],
+    edges: [
+      { id: 'ec-trigger-1-tool-1', source: 'trigger-code-1', target: 'tool-code-1', type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed }, animated: true },
+      { id: 'ec-tool-1-agent-1', source: 'tool-code-1', target: 'agent-code-1', type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed }, animated: true },
+      { id: 'ec-agent-1-output-1', source: 'agent-code-1', target: 'output-code-1', type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed }, animated: true },
+    ],
+    createdAt: '2025-04-10T09:15:00Z',
+    updatedAt: '2025-04-12T16:20:00Z',
+    status: 'draft',
   }
 ];
 
-// Sample templates for testing
-const sampleTemplates = [
+// Sample templates for testing - adapted to include nodes and edges
+const sampleTemplates: BackendWorkflowTemplate[] = [
   {
-    id: 'template-1',
-    name: 'Simple Research Workflow',
-    description: 'A basic template for research-oriented workflows',
-    steps: [
-      {
-        name: 'Research',
-        description: 'Gather information on the topic',
-        type: 'agent',
-        target_id: 'research_agent',
-        dependencies: [],
-        parameters: { depth: 'medium' }
-      },
-      {
-        name: 'Summarize',
-        description: 'Create a summary of findings',
-        type: 'agent',
-        target_id: 'summarizer_agent',
-        dependencies: ['0'],
-        parameters: {}
-      }
+    id: 'template-research-basic',
+    name: 'Basic Research Template',
+    description: 'A simple template for research and summarization.',
+    nodes: [
+      { type: 'triggerNode', data: { label: 'Topic Input', entityId: 'user_input' }, positionHint: {x: 50, y: 50}},
+      { type: 'agentNode', data: { label: 'Research Agent', entityId: 'research_agent_id', capability: 'web_search', params: { depth: 'medium' } }, positionHint: {x: 250, y: 50} },
+      { type: 'agentNode', data: { label: 'Summarizer Agent', entityId: 'summarizer_agent_id' }, positionHint: {x: 500, y: 50} },
+      { type: 'outputNode', data: { label: 'Summary Output', entityId: 'user_response' }, positionHint: {x: 750, y: 50} },
+    ],
+    edges: [
+      { sourceIndex: 0, targetIndex: 1 },
+      { sourceIndex: 1, targetIndex: 2 },
+      { sourceIndex: 2, targetIndex: 3 },
     ],
     tags: ['research', 'template', 'basic'],
   },
-  {
-    id: 'template-2',
-    name: 'Development Workflow',
-    description: 'Template for software development tasks',
-    steps: [
-      {
-        name: 'Plan Architecture',
-        description: 'Design system architecture',
-        type: 'agent',
-        target_id: 'architect_agent',
-        dependencies: [],
-        parameters: {}
-      },
-      {
-        name: 'Generate Code',
-        description: 'Create initial code implementation',
-        type: 'agent',
-        target_id: 'code_generator_agent',
-        dependencies: ['0'],
-        parameters: {}
-      },
-      {
-        name: 'Test Code',
-        description: 'Perform automated testing',
-        type: 'tool',
-        target_id: 'testing_tool',
-        dependencies: ['1'],
-        parameters: { coverage: 'high' }
-      }
-    ],
-    tags: ['development', 'coding', 'template'],
-  }
 ];
 
 // In-memory storage for testing
-let workflows = [...sampleWorkflows];
-let workflowExecutions: WorkflowExecution[] = [];
-let nextWorkflowId = 789; // Just for demo purposes
+let workflowsStore: Workflow[] = [...sampleWorkflows]; // Renamed to avoid conflict
+let workflowExecutionsStore: ClientWorkflowExecution[] = [];
+let nextWorkflowIdCounter = 789;
 
 export async function GET(req: NextRequest) {
-  // Check for specific workflow ID in the URL
-  const url = new URL(req.url);
-  const pathParts = url.pathname.split('/');
-  const workflowId = pathParts[pathParts.length - 1];
-  
-  // If the URL ends with 'workflows', return all workflows
-  if (workflowId === 'workflows') {
-    return NextResponse.json(workflows);
+  const requestUrl = new URL(req.url); // Use a different variable name
+  const pathParts = requestUrl.pathname.split('/');
+  const lastSegment = pathParts[pathParts.length - 1];
+
+  // Check if the last segment is 'workflows', implying a list request
+  // or if it's part of a specific workflow ID like /api/workflows/wf-123
+  if (lastSegment === 'workflows' && pathParts[pathParts.length - 2] === 'api') {
+    return NextResponse.json(workflowsStore);
   }
-  
-  // If we have an ID, find that specific workflow
-  const workflow = workflows.find(wf => wf.id === workflowId);
+
+  // If the last segment is 'templates'
+  if (lastSegment === 'templates' && pathParts[pathParts.length - 2] === 'workflows') {
+    return NextResponse.json(sampleTemplates);
+  }
+
+  // Otherwise, assume lastSegment is a workflowId
+  const workflowId = lastSegment;
+  const workflow = workflowsStore.find(wf => wf.id === workflowId);
   if (workflow) {
     return NextResponse.json(workflow);
   }
   
-  // Special endpoints
-  if (workflowId === 'templates') {
-    return NextResponse.json(sampleTemplates);
-  }
-  
-  // If we couldn't find the workflow, return 404
-  return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+  return NextResponse.json({ error: 'Resource not found or invalid path' }, { status: 404 });
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    
-    // Check if this is a template-based creation
-    if (req.url.endsWith('from-template')) {
-      const { template_id, parameters } = body;
+    const requestUrl = new URL(req.url); // Use a different variable name
+
+    if (requestUrl.pathname.endsWith('/from-template')) {
+      const { template_id, name, description } = body as { template_id: string, name?: string, description?: string };
       const template = sampleTemplates.find(t => t.id === template_id);
       
       if (!template) {
         return NextResponse.json({ error: 'Template not found' }, { status: 404 });
       }
       
-      // Create workflow from template
-      const newWorkflow: WorkflowNode = {
-        id: `wf-${nextWorkflowId++}`,
-        name: template.name,
-        description: template.description,
-        status: 'draft',
-        steps: template.steps.map((step, index) => ({
-          ...step,
-          id: `step-${Date.now()}-${index}`,
-          // Update dependencies to use actual step IDs if needed
-        })),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        tags: template.tags,
+      const newWorkflowId = `wf-${nextWorkflowIdCounter++}`;
+      const instantiatedNodes: WorkflowNode[] = template.nodes.map((tn, index) => ({
+        id: `${newWorkflowId}-node-${index}`,
+        type: tn.type,
+        position: tn.positionHint || { x: 50 + index * 200, y: 100 }, // Basic layout
+        data: {
+          ...tn.data, // Spread template data
+          status: 'pending', // Default status
+        } as WorkflowNodeData, // Ensure data conforms to WorkflowNodeData
+      }));
+
+      const instantiatedEdges: WorkflowEdge[] = template.edges.map((te, index) => ({
+        id: `${newWorkflowId}-edge-${index}`,
+        source: instantiatedNodes[te.sourceIndex!].id,
+        target: instantiatedNodes[te.targetIndex!].id,
+        type: 'smoothstep',
+        animated: true,
+        markerEnd: { type: MarkerType.ArrowClosed },
+      }));
+      
+      const newWorkflow: Workflow = {
+        id: newWorkflowId,
+        name: name || template.name || `Workflow from ${template.id}`,
+        description: description || template.description || `Description for ${template.id}`,
+        nodes: instantiatedNodes,
+        edges: instantiatedEdges,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'draft', // New workflows from template are drafts
+        // tags: template.tags, // Removed as 'tags' is not in Workflow interface
       };
       
-      workflows.push(newWorkflow);
-      return NextResponse.json(newWorkflow);
+      workflowsStore.push(newWorkflow);
+      return NextResponse.json(newWorkflow, { status: 201 });
     }
     
-    // Handle workflow execution
-    if (req.url.includes('/execute')) {
-      const pathParts = url.pathname.split('/');
+    if (requestUrl.pathname.includes('/execute')) {
+      const pathParts = requestUrl.pathname.split('/');
       const workflowId = pathParts[pathParts.length - 2]; // ID is before "execute"
       
-      const workflow = workflows.find(wf => wf.id === workflowId);
+      const workflow = workflowsStore.find(wf => wf.id === workflowId);
       if (!workflow) {
-        return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Workflow not found for execution' }, { status: 404 });
       }
       
-      // Create a new execution record
-      const execution: WorkflowExecution = {
+      const execution: ClientWorkflowExecution = {
         id: `exec-${Date.now()}`,
         workflow_id: workflowId,
-        status: 'in_progress' as const,
+        status: 'in_progress',
         started_at: new Date().toISOString(),
-        step_results: [] as StepResult[],
+        step_results: {}, // Changed from array to Record<string, StepResult>
+        // metadata: {}, // If you use metadata
       };
       
-      workflowExecutions.push(execution);
+      workflowExecutionsStore.push(execution);
       
-      // In a real implementation, we would start the actual workflow execution here
-      // For demo purposes, we'll simulate this with a timeout that completes the execution
+      // Simulate execution
       setTimeout(() => {
-        // Find the execution and update it
-        const idx = workflowExecutions.findIndex(e => e.id === execution.id);
-        if (idx !== -1) {
-          // Simulate step results
-          const stepResults: StepResult[] = [];
-          workflow.steps.forEach(step => {
-            stepResults.push({
-              status: 'completed',
-              started_at: new Date(Date.now() - 5000).toISOString(),
-              completed_at: new Date().toISOString(),
-              duration: Math.floor(Math.random() * 5) + 1,
-              output: { result: `Simulated result for step ${step.name}` }
-            });
+        const execIndex = workflowExecutionsStore.findIndex(e => e.id === execution.id);
+        if (execIndex !== -1) {
+          const updatedStepResults: Record<string, StepResult> = {};
+          workflow.nodes.forEach(node => { // Iterate over nodes
+            if (node.type !== 'triggerNode' && node.type !== 'outputNode') { // Simulate results for processing nodes
+              updatedStepResults[node.id] = {
+                status: 'completed',
+                started_at: new Date(Date.now() - Math.random() * 3000).toISOString(),
+                completed_at: new Date().toISOString(),
+                duration: Math.floor(Math.random() * 3000) + 500,
+                output: { result: `Simulated result for node ${node.data.label}` },
+              };
+            }
           });
           
-          workflowExecutions[idx] = {
-            ...execution,
+          workflowExecutionsStore[execIndex] = {
+            ...workflowExecutionsStore[execIndex],
             status: 'completed',
             completed_at: new Date().toISOString(),
-            step_results: stepResults
+            step_results: updatedStepResults,
           };
+          console.log(`Simulated execution completed for ${execution.id}`);
         }
-      }, 5000); // Simulate a 5-second execution
+      }, 3000); // Simulate a 3-second execution
       
-      return NextResponse.json(execution);
+      return NextResponse.json({ executionId: execution.id }, { status: 202 });
     }
     
     // Regular workflow creation
-    const newWorkflow: WorkflowNode = {
-      id: `wf-${nextWorkflowId++}`,
-      ...body,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+    // The body should be a Partial<Workflow> but must include name, nodes, edges.
+    const { name, description, nodes, edges, status } = body as Partial<Workflow> & { name: string, nodes: WorkflowNode[], edges: WorkflowEdge[] };
+
+    if (!name || !nodes || !edges) {
+        return NextResponse.json({ error: 'Missing required fields: name, nodes, edges' }, { status: 400 });
+    }
+    
+    const newWorkflow: Workflow = {
+      id: `wf-${nextWorkflowIdCounter++}`,
+      name,
+      description: description || '',
+      nodes,
+      edges,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: status || 'draft',
     };
     
-    workflows.push(newWorkflow);
-    return NextResponse.json(newWorkflow);
+    workflowsStore.push(newWorkflow);
+    return NextResponse.json(newWorkflow, { status: 201 });
+
   } catch (error) {
+    console.error("POST Error:", error);
     return NextResponse.json(
       { error: 'Invalid request', details: (error as Error).message },
       { status: 400 }
@@ -278,25 +285,32 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const url = new URL(req.url);
-    const pathParts = url.pathname.split('/');
+    const requestUrl = new URL(req.url); // Use a different variable name
+    const pathParts = requestUrl.pathname.split('/');
     const workflowId = pathParts[pathParts.length - 1];
     
-    const workflowIndex = workflows.findIndex(wf => wf.id === workflowId);
+    const workflowIndex = workflowsStore.findIndex(wf => wf.id === workflowId);
     if (workflowIndex === -1) {
-      return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Workflow not found to update' }, { status: 404 });
     }
     
-    const updates = await req.json();
+    const updates = (await req.json()) as Partial<Workflow>;
     
-    workflows[workflowIndex] = {
-      ...workflows[workflowIndex],
-      ...updates,
-      updated_at: new Date().toISOString()
-    } as WorkflowNode;
+    // Ensure nodes and edges are fully replaced if provided, or keep existing
+    // Prevent partial updates of nodes/edges arrays themselves, they should be sent complete.
+    const updatedWorkflow: Workflow = {
+      ...workflowsStore[workflowIndex],
+      ...updates, // Apply all updates
+      nodes: updates.nodes || workflowsStore[workflowIndex].nodes, // Replace nodes array if provided
+      edges: updates.edges || workflowsStore[workflowIndex].edges, // Replace edges array if provided
+      updatedAt: new Date().toISOString(),
+    };
     
-    return NextResponse.json(workflows[workflowIndex]);
+    workflowsStore[workflowIndex] = updatedWorkflow;
+    
+    return NextResponse.json(updatedWorkflow);
   } catch (error) {
+    console.error("PUT Error:", error);
     return NextResponse.json(
       { error: 'Invalid request', details: (error as Error).message },
       { status: 400 }
@@ -305,16 +319,16 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const url = new URL(req.url);
-  const pathParts = url.pathname.split('/');
+  const requestUrl = new URL(req.url); // Use a different variable name
+  const pathParts = requestUrl.pathname.split('/');
   const workflowId = pathParts[pathParts.length - 1];
   
-  const initialLength = workflows.length;
-  workflows = workflows.filter(wf => wf.id !== workflowId);
+  const initialLength = workflowsStore.length;
+  workflowsStore = workflowsStore.filter(wf => wf.id !== workflowId);
   
-  if (workflows.length === initialLength) {
-    return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+  if (workflowsStore.length === initialLength) {
+    return NextResponse.json({ error: 'Workflow not found to delete' }, { status: 404 });
   }
   
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ message: `Workflow ${workflowId} deleted successfully.` });
 }

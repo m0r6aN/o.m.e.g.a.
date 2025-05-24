@@ -1,5 +1,4 @@
 D:\Repos\o.m.e.g.a/
-├── Directory_Structure.md
 ├── README.md
 ├── a2a-workflow-diagram.svg
 ├── backend
@@ -38,6 +37,9 @@ D:\Repos\o.m.e.g.a/
 │   │       │   │   ├── Dockerfile
 │   │       │   │   ├── agent.py
 │   │       │   │   └── requirements.txt
+│   │       │   ├── migration_assistant
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\migration_assistant/
+│   │       │   │   └── agent.py
 │   │       │   ├── moderator
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\moderator/
 │   │       │   │   ├── Dockerfile
@@ -160,6 +162,14 @@ D:\Repos\o.m.e.g.a/
 │   │       │   │   ├── Dockerfile
 │   │       │   │   ├── requirements.txt
 │   │       │   │   └── tool.py
+│   │       │   ├── code_analyzer
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\tools\code_analyzer/
+│   │       │   │   ├── README.md
+│   │       │   │   ├── dockerfile.txt
+│   │       │   │   ├── documentation.md
+│   │       │   │   ├── requirements.txt
+│   │       │   │   ├── test_dependency_resolver.py
+│   │       │   │   └── tool.py
 │   │       │   ├── execute_sql
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\tools\execute_sql/
 │   │       │   │   ├── Dockerfile
@@ -210,21 +220,30 @@ D:\Repos\o.m.e.g.a/
 │   │   ├── run_finance_agent.py
 │   │   ├── run_research_agent.py
 │   │   ├── run_triage_agent_flow.py
-│   │   └── test_capability_matching.py
+│   │   ├── temp.py
+│   │   ├── test_capability_matching.py
+│   │   └── test_migration_assistant_agent.py
+├── dev_ops
+│   D:\Repos\o.m.e.g.a\dev_ops/
+│   └── github_workflows_ci.yaml
 ├── docs
 │   D:\Repos\o.m.e.g.a\docs/
+│   ├── AI Code Migration Platform Backend Implementation Directives.md
 │   ├── bootstrap.md
 │   ├── docker-containers.md
 │   ├── dual_mode_agent_readme.md
 │   ├── instructions.txt
 │   ├── mcp-integration-guide.md
 │   ├── omega-next-steps.md
-│   └── tool_builder_pattern.md
+│   ├── tool_builder_pattern.md
+│   ├── write_code (1).zip
+│   └── write_code.zip
 ├── frontend
 │   D:\Repos\o.m.e.g.a\frontend/
 │   ├── OMEGA UI_README.md
 │   ├── components.json
 │   ├── next.config.js
+│   ├── omega-workflow-integration.md
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── postcss.config.js
@@ -277,9 +296,28 @@ D:\Repos\o.m.e.g.a/
 │   │   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\tools\call/
 │   │   │   │   │   │   └── route.ts
 │   │   │   │   │   └── route.ts
-│   │   │   │   └── workflows
-│   │   │   │       D:\Repos\o.m.e.g.a\frontend\src\app\api\workflows/
-│   │   │   │       └── route.ts
+│   │   │   │   ├── workflow-executions
+│   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\workflow-executions/
+│   │   │   │   │   └── [id]
+│   │   │   │   │       D:\Repos\o.m.e.g.a\frontend\src\app\api\workflow-executions\[id]/
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── workflows
+│   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\workflows/
+│   │   │   │   │   ├── [id]
+│   │   │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\api\workflows\[id]/
+│   │   │   │   │   │   └── execute
+│   │   │   │   │   │       D:\Repos\o.m.e.g.a\frontend\src\app\api\workflows\[id]\execute/
+│   │   │   │   │   │       └── route.ts
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── ws
+│   │   │   │       D:\Repos\o.m.e.g.a\frontend\src\app\api\ws/
+│   │   │   │       └── workflows
+│   │   │   │           D:\Repos\o.m.e.g.a\frontend\src\app\api\ws\workflows/
+│   │   │   │           └── executions
+│   │   │   │               D:\Repos\o.m.e.g.a\frontend\src\app\api\ws\workflows\executions/
+│   │   │   │               └── [id]
+│   │   │   │                   D:\Repos\o.m.e.g.a\frontend\src\app\api\ws\workflows\executions\[id]/
+│   │   │   │                   └── route.ts
 │   │   │   ├── dashboard
 │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\app\dashboard/
 │   │   │   │   ├── layout.tsx
@@ -310,8 +348,11 @@ D:\Repos\o.m.e.g.a/
 │   │   │       D:\Repos\o.m.e.g.a\frontend\src\app\workflows/
 │   │   │       ├── [id]
 │   │   │       │   D:\Repos\o.m.e.g.a\frontend\src\app\workflows\[id]/
-│   │   │       └── create
-│   │   │           D:\Repos\o.m.e.g.a\frontend\src\app\workflows\create/
+│   │   │       │   └── page.tsx
+│   │   │       ├── create
+│   │   │       │   D:\Repos\o.m.e.g.a\frontend\src\app\workflows\create/
+│   │   │       │   └── page.tsx
+│   │   │       └── page.tsx
 │   │   ├── components
 │   │   │   D:\Repos\o.m.e.g.a\frontend\src\components/
 │   │   │   ├── agents
@@ -343,6 +384,7 @@ D:\Repos\o.m.e.g.a/
 │   │   │   │   D:\Repos\o.m.e.g.a\frontend\src\components\ui/
 │   │   │   │   ├── accordion.tsx
 │   │   │   │   ├── alert-dialog.tsx
+│   │   │   │   ├── alert.tsx
 │   │   │   │   ├── badge.tsx
 │   │   │   │   ├── button.tsx
 │   │   │   │   ├── card.tsx
@@ -372,10 +414,15 @@ D:\Repos\o.m.e.g.a/
 │   │   │       │   ├── index.ts
 │   │   │       │   ├── tool-node.tsx
 │   │   │       │   └── trigger-node.tsx
-│   │   │       └── workflow-builder.tsx
+│   │   │       ├── workflow-builder.tsx
+│   │   │       ├── workflow-create-form.tsx
+│   │   │       ├── workflow-detail.tsx
+│   │   │       └── workflow-list.tsx
 │   │   ├── hooks
 │   │   │   D:\Repos\o.m.e.g.a\frontend\src\hooks/
-│   │   │   └── use-mcp.ts
+│   │   │   ├── use-mcp.ts
+│   │   │   ├── use-workflow-execution.ts
+│   │   │   └── use-workflows.ts
 │   │   ├── providers
 │   │   │   D:\Repos\o.m.e.g.a\frontend\src\providers/
 │   │   │   ├── agent-provider.tsx
@@ -385,6 +432,11 @@ D:\Repos\o.m.e.g.a/
 │   │       D:\Repos\o.m.e.g.a\frontend\src\types/
 │   │       └── index.ts
 │   ├── tailwind.config.js
-│   └── tsconfig.json
+│   ├── tsconfig.json
+│   ├── types-and-workflow-integration-summary.md
+│   ├── websocket-integration-summary.md
+│   └── workflow-builder-integration-summary.md
 ├── index.html
+├── package-lock.json
+├── package.json
 └── temp.py

@@ -22,7 +22,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-
   mongo:
     image: mongo:latest
     volumes:
@@ -36,7 +35,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-
   redis:
     image: redis:latest
     ports:
@@ -51,6 +49,55 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+  repo-connector:
+    image: repo-connector:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.repo
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - REGISTRY_URL=http://registry:9401
+    depends_on:
+      - mongodb
+      - registry
+  
+  code-analyzer:
+    image: code-analyzer:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.analyzer
+    ports:
+      - "9022:9022"
+      - "9023:9023"
+    environment:
+      - PORT=9022
+      - MCP_PORT=9023
+      - MONGO_URI=mongodb://mongodb:27017
+      - REGISTRY_URL=http://registry:9401
+    depends_on:
+      - mongodb
+      - registry
+
+  migration-assistant:
+    image: migration-assistant:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.migration
+    ports:
+      - "9024:9024"
+      - "9025:9025"
+    environment:
+      - PORT=9024
+      - MCP_PORT=9025
+      - MONGO_URI=mongodb://mongodb:27017
+      - REGISTRY_URL=http://registry:9401
+      - REDIS_HOST=redis
+    depends_on:
+      - mongodb
+      - redis
+      - registry
 
   # Agents
   orchestrator:
