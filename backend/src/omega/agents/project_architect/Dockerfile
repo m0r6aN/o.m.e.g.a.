@@ -1,27 +1,27 @@
-# agents/project_architect/Dockerfile
+# Minimal Dockerfile for OMEGA Test Agent
 FROM python:3.13.2-slim
 
 WORKDIR /app
 
-# Copy requirements
-COPY src/omega/agents/project_architect/requirements.txt .
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy omega package structure
-COPY src/omega /app/omega
+# Copy the agent file
+COPY agent.py .
 
-# Copy agent code
-COPY src/omega/agents/project_architect /app/agent
+# Expose ports
+EXPOSE 9016
+EXPOSE 9017
 
-# Set environment variables
-ENV PORT=9016
-ENV MCP_PORT=9017
-ENV REDIS_HOST=redis
-ENV REDIS_PORT=6379
-ENV REGISTRY_URL=http://registry:9401
-
-# Add OpenAI API key env var (this will be overridden at runtime)
-ENV OPENAI_API_KEY=""
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:9016/health || exit 1
 
 # Run the agent
 CMD ["python", "agent.py"]

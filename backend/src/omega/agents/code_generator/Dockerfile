@@ -1,30 +1,27 @@
-# agents/code_generator/Dockerfile
+# Minimal Dockerfile for OMEGA Test Agent
 FROM python:3.13.2-slim
 
 WORKDIR /app
 
-# Copy core files
-COPY src/omega/core/registerable_dual_mode_agent.py /app/omega/core/
-COPY src/omega/core/dual_mode_agent.py /app/omega/core/
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY src/omega/agents/code_generator/requirements.txt .
+# Copy requirements and install
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy omega package structure
-COPY src/omega /app/omega
+# Copy the agent file
+COPY agent.py .
 
-# Copy agent code
-COPY src/omega/agents/code_generator /app/agent
+# Expose ports
+EXPOSE 9014
+EXPOSE 9015
 
-# Set environment variables
-ENV PORT=9014
-ENV MCP_PORT=9015
-ENV REDIS_HOST=redis
-ENV REDIS_PORT=6379
-ENV REGISTRY_URL=http://registry:9401
-# Add OpenAI API key env var (this will be overridden at runtime)
-ENV OPENAI_API_KEY=""
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:9014/health || exit 1
 
 # Run the agent
-CMD ["python", "agent/agent.py"]
+CMD ["python", "agent.py"]

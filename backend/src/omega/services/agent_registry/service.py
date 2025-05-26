@@ -1,235 +1,310 @@
-# omega/services/agent_registry/service.py
+#!/usr/bin/env python3
+"""
+Minimal OMEGA Agent Registry Service
+Handles agent registration, discovery, and heartbeats.
+"""
 
 import os
-import time
-from typing import List, Optional, Literal
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from pymongo import MongoClient
-from pymongo.collection import Collection
+import asyncio
+import logging
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 from contextlib import asynccontextmanager
-from omega.core.agent_discovery import CapabilityRegistry, AgentCapability
 
-capability_registry = CapabilityRegistry(db_client=app.database)
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+from pydantic import BaseModel, Field
+import redis.asyncio as redis
+from pymongo import MongoClient
+import uvicorn
 
-# Data models
-class EndpointUrls(BaseModel):
-    base_url: str
-    a2a_card: Optional[str] = None
-    mcp_endpoint: Optional[str] = None
+# Configuration
+PORT = int(os.getenv("PORT", 9401))
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://omega:omegapass@localhost:27017/agent_registry?authSource=admin")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
 
+# Setup logging
+logging.basicConfig(level=LOG_LEVEL.upper())
+logger = logging.getLogger("agent_registry")
 
-class AgentMetadata(BaseModel):
-    description: str
-    version: str
-    tags: List[str] = []
-
-
+# Pydantic Models
 class AgentInfo(BaseModel):
     id: str
     name: str
-    type: Literal["agent", "tool"]
-    protocol: Literal["a2a", "mcp", "dual"]
-    capabilities: List[str] = []
-    endpoints: EndpointUrls
-    metadata: AgentMetadata
-    last_heartbeat: float = Field(default_factory=time.time)
-
+    description: str
+    version: str = "1.0.0"
+    skills: List[str] = []
+    agent_type: str = "agent"
+    host: str = "localhost"
+    port: int = 8000
+    mcp_port: Optional[int] = None
+    tags: List[str] = []
+    status: str = "registered"
+    last_heartbeat: Optional[datetime] = None
+    registered_at: datetime = Field(default_factory=datetime.utcnow)
 
 class HeartbeatRequest(BaseModel):
-    id: str
+    agent_id: str
+    status: str = "active"
 
+# Global connections
+redis_client: Optional[redis.Redis] = None
+mongo_client: Optional[MongoClient] = None
+agents_collection = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Connect to MongoDB on startup
-    app.mongodb_client = MongoClient(
-        os.getenv("MONGODB_URL", "mongodb://localhost:27017/")
-    )
-    app.database = app.mongodb_client[os.getenv("MONGODB_NAME", "agent_registry")]
+    """Startup and shutdown events"""
+    global redis_client, mongo_client, agents_collection
     
-    # Create indexes if they don't exist
-    app.database.agents.create_index("id", unique=True)
-    app.database.agents.create_index("type")
-    app.database.agents.create_index("capabilities")
+    # Startup
+    logger.info("🚀 Starting OMEGA Agent Registry Service")
     
-    print("🚀 Connected to MongoDB")
+    try:
+        # Connect to Redis
+        redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+        await redis_client.ping()
+        logger.info("✅ Connected to Redis")
+        
+        # Connect to MongoDB
+        mongo_client = MongoClient(MONGODB_URL)
+        db = mongo_client.get_default_database()
+        agents_collection = db.agents
+        
+        # Test MongoDB connection
+        mongo_client.admin.command('ping')
+        logger.info("✅ Connected to MongoDB")
+        
+        # Create indexes
+        agents_collection.create_index("id", unique=True)
+        agents_collection.create_index("last_heartbeat")
+        
+        logger.info("🌟 Agent Registry Service is READY!")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize connections: {e}")
+        raise
     
     yield
     
-    # Close MongoDB connection on shutdown
-    app.mongodb_client.close()
-    print("👋 Closed MongoDB connection")
+    # Shutdown
+    logger.info("🛑 Shutting down Agent Registry Service")
+    if redis_client:
+        await redis_client.close()
+    if mongo_client:
+        mongo_client.close()
 
-
-app = FastAPI(lifespan=lifespan)
-
-# Enable CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+# Create FastAPI app
+app = FastAPI(
+    title="OMEGA Agent Registry",
+    description="Central registry for OMEGA framework agents",
+    version="1.0.0",
+    lifespan=lifespan
 )
 
-
-# Dependency to get the agents collection
-def get_agent_collection() -> Collection:
-    return app.database.agents
-
-# A2A Agent Registry
-
-@app.post("/registry/register", response_model=AgentInfo)
-async def register_agent(agent: AgentInfo, collection: Collection = Depends(get_agent_collection)):
-    """Register a new agent or update an existing one"""
-    # Set the current time as last heartbeat
-    agent.last_heartbeat = time.time()
-    
-    # Check if agent already exists
-    existing = collection.find_one({"id": agent.id})
-    
-    if existing:
-        # Update existing agent
-        collection.update_one(
-            {"id": agent.id},
-            {"$set": agent.model_dump()}
-        )
-        return agent
-    else:
-        # Insert new agent
-        collection.insert_one(agent.model_dump())
-        return agent
-
-
-@app.get("/registry/discover", response_model=List[AgentInfo])
-async def discover_all_agents(collection: Collection = Depends(get_agent_collection)):
-    """Get all registered agents and tools"""
-    # Find all agents with heartbeat in the last 60 seconds
-    cutoff_time = time.time() - 60
-    agents = list(collection.find({"last_heartbeat": {"$gt": cutoff_time}}))
-    return agents
-
-
-@app.get("/registry/discover/{agent_id}", response_model=AgentInfo)
-async def discover_agent_by_id(agent_id: str, collection: Collection = Depends(get_agent_collection)):
-    """Get a specific agent by ID"""
-    agent = collection.find_one({"id": agent_id})
-    if not agent:
-        raise HTTPException(status_code=404, detail=f"Agent with ID {agent_id} not found")
-    return agent
-
-
-@app.get("/registry/discover/type/{agent_type}", response_model=List[AgentInfo])
-async def discover_agents_by_type(
-    agent_type: Literal["agent", "tool"], 
-    collection: Collection = Depends(get_agent_collection)
-):
-    """Get all agents or all tools"""
-    # Find all agents/tools with heartbeat in the last 60 seconds
-    cutoff_time = time.time() - 60
-    agents = list(collection.find({
-        "type": agent_type,
-        "last_heartbeat": {"$gt": cutoff_time}
-    }))
-    return agents
-
-
-@app.get("/registry/discover/capability", response_model=List[AgentInfo])
-async def discover_agents_by_capability(request: dict, collection: Collection = Depends(get_agent_collection)):
-    """Find agents that match a capability with enhanced scoring"""
-    capability = request.get("capability")
-    min_score = request.get("min_score", 0.5)
-    
-    if not capability:
-        raise HTTPException(status_code=400, detail="Capability name is required")
-    
-    # Get all active agents
-    cutoff_time = time.time() - 60
-    all_agents = list(collection.find({"last_heartbeat": {"$gt": cutoff_time}}))
-    
-    # Initialize the capability matcher
-    matcher = EnhancedCapabilityMatcher(None)  # We'll handle registry access directly
-    
-    # Score and filter agents
-    scored_agents = []
-    for agent_data in all_agents:
-        agent = AgentInfo(**agent_data)
-        score = matcher._score_agent_for_capability(agent, capability)
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    try:
+        # Check Redis
+        await redis_client.ping()
         
-        if score >= min_score:
-            scored_agents.append({
-                "agent_id": agent.id,
+        # Check MongoDB
+        mongo_client.admin.command('ping')
+        
+        return {
+            "status": "healthy",
+            "service": "agent_registry",
+            "timestamp": datetime.utcnow().isoformat(),
+            "connections": {
+                "redis": "connected",
+                "mongodb": "connected"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Service unhealthy: {str(e)}")
+
+@app.post("/agents/register")
+async def register_agent(agent: AgentInfo, background_tasks: BackgroundTasks):
+    """Register a new agent"""
+    try:
+        # Store in MongoDB
+        agent_dict = agent.model_dump()
+        agents_collection.replace_one(
+            {"id": agent.id},
+            agent_dict,
+            upsert=True
+        )
+        
+        # Store in Redis for fast access
+        await redis_client.hset(
+            f"agent:{agent.id}",
+            mapping={
                 "name": agent.name,
-                "score": score,
-                "endpoints": agent.endpoints,
-                "metadata": agent.metadata
-            })
-    
-    # Sort by score (highest first)
-    scored_agents.sort(key=lambda a: a["score"], reverse=True)
-    return scored_agents
-@app.post("/registry/capabilities/register")
-async def register_agent_capabilities(request: dict):
-    """Register an agent's capabilities"""
-    agent_id = request.get("agent_id")
-    capabilities_data = request.get("capabilities", [])
-    
-    if not agent_id:
-        raise HTTPException(status_code=400, detail="Agent ID is required")
-    
-    # Convert to AgentCapability objects
-    capabilities = [AgentCapability(**cap) for cap in capabilities_data]
-    
-    # Register with the capability registry
-    result = await capability_registry.register_agent_capabilities(agent_id, capabilities)
-    return result
+                "status": agent.status,
+                "last_heartbeat": datetime.utcnow().isoformat(),
+                "host": agent.host,
+                "port": str(agent.port)
+            }
+        )
+        
+        # Set TTL for Redis entry (agents must send heartbeats)
+        await redis_client.expire(f"agent:{agent.id}", 300)  # 5 minutes
+        
+        logger.info(f"✅ Registered agent: {agent.id} ({agent.name})")
+        
+        return {
+            "status": "registered",
+            "agent_id": agent.id,
+            "message": f"Agent {agent.name} registered successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to register agent {agent.id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/registry/capabilities/get/{agent_id}")
-async def get_agent_capabilities(agent_id: str):
-    """Get an agent's registered capabilities"""
-    capabilities = await capability_registry.get_agent_capabilities(agent_id)
-    return [cap.model_dump() for cap in capabilities]
+@app.post("/agents/heartbeat")
+async def agent_heartbeat(heartbeat: HeartbeatRequest):
+    """Receive agent heartbeat"""
+    try:
+        current_time = datetime.utcnow()
+        
+        # Update MongoDB
+        result = agents_collection.update_one(
+            {"id": heartbeat.agent_id},
+            {
+                "$set": {
+                    "last_heartbeat": current_time,
+                    "status": heartbeat.status
+                }
+            }
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # Update Redis
+        await redis_client.hset(
+            f"agent:{heartbeat.agent_id}",
+            mapping={
+                "status": heartbeat.status,
+                "last_heartbeat": current_time.isoformat()
+            }
+        )
+        await redis_client.expire(f"agent:{heartbeat.agent_id}", 300)
+        
+        return {
+            "status": "acknowledged",
+            "agent_id": heartbeat.agent_id,
+            "timestamp": current_time.isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Heartbeat failed for {heartbeat.agent_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/registry/capabilities/match")
-async def match_capability(request: dict):
-    """Find agents that match a capability query"""
-    capability_query = request.get("text", "")
-    min_score = request.get("min_score", 0.5)
-    
-    if not capability_query:
-        raise HTTPException(status_code=400, detail="Capability query is required")
-    
-    # Use the capability registry to find matching agents
-    matches = await capability_registry.match_capability(request, min_score)
-    return matches
+@app.get("/agents")
+async def list_agents():
+    """List all registered agents"""
+    try:
+        agents = list(agents_collection.find({}, {"_id": 0}))
+        
+        # Convert datetime objects to ISO strings
+        for agent in agents:
+            if "registered_at" in agent and agent["registered_at"]:
+                agent["registered_at"] = agent["registered_at"].isoformat()
+            if "last_heartbeat" in agent and agent["last_heartbeat"]:
+                agent["last_heartbeat"] = agent["last_heartbeat"].isoformat()
+        
+        return {
+            "agents": agents,
+            "count": len(agents),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to list agents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/registry/heartbeat")
-async def update_heartbeat(
-    request: HeartbeatRequest,
-    collection: Collection = Depends(get_agent_collection)
-):
-    """Update the last heartbeat time for an agent"""
-    result = collection.update_one(
-        {"id": request.id},
-        {"$set": {"last_heartbeat": time.time()}}
+@app.get("/agents/{agent_id}")
+async def get_agent(agent_id: str):
+    """Get specific agent information"""
+    try:
+        agent = agents_collection.find_one({"id": agent_id}, {"_id": 0})
+        
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # Convert datetime objects
+        if "registered_at" in agent and agent["registered_at"]:
+            agent["registered_at"] = agent["registered_at"].isoformat()
+        if "last_heartbeat" in agent and agent["last_heartbeat"]:
+            agent["last_heartbeat"] = agent["last_heartbeat"].isoformat()
+        
+        return agent
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Failed to get agent {agent_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/agents/{agent_id}")
+async def unregister_agent(agent_id: str):
+    """Unregister an agent"""
+    try:
+        # Remove from MongoDB
+        result = agents_collection.delete_one({"id": agent_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # Remove from Redis
+        await redis_client.delete(f"agent:{agent_id}")
+        
+        logger.info(f"✅ Unregistered agent: {agent_id}")
+        
+        return {
+            "status": "unregistered",
+            "agent_id": agent_id,
+            "message": "Agent unregistered successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Failed to unregister agent {agent_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/stats")
+async def get_stats():
+    """Get registry statistics"""
+    try:
+        total_agents = agents_collection.count_documents({})
+        active_agents = agents_collection.count_documents({
+            "last_heartbeat": {"$gte": datetime.utcnow() - timedelta(minutes=5)}
+        })
+        
+        return {
+            "total_agents": total_agents,
+            "active_agents": active_agents,
+            "inactive_agents": total_agents - active_agents,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to get stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    logger.info(f"🚀 Starting OMEGA Agent Registry on port {PORT}")
+    uvicorn.run(
+        "service:app",
+        host="0.0.0.0",
+        port=PORT,
+        log_level=LOG_LEVEL.lower(),
+        reload=False
     )
-    
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail=f"Agent with ID {request.id} not found")
-    
-    return {"status": "ok"}
-
-
-@app.delete("/registry/unregister/{agent_id}")
-async def unregister_agent(agent_id: str, collection: Collection = Depends(get_agent_collection)):
-    """Remove an agent from the registry"""
-    result = collection.delete_one({"id": agent_id})
-    
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail=f"Agent with ID {agent_id} not found")
-    
-    return {"status": "ok", "message": f"Agent {agent_id} unregistered successfully"}
-
-

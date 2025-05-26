@@ -1,4 +1,4 @@
-from improved_registerable_agent import RegisterableDualModeAgent
+from omega.agents.registerable_dual_mode_agent import RegisterableDualModeAgent
 from omega.core.models.task_models import TaskEnvelope
 
 class MathSolverAgent(RegisterableDualModeAgent):

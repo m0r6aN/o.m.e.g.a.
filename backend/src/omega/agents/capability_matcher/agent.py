@@ -1,173 +1,518 @@
-# omega/agents/capability_matcher.py
+#!/usr/bin/env python3
+"""
+OMEGA Capability Matcher Agent - Modern Self-Contained Version
+Intelligently matches user requests to the best available agents based on capabilities.
+"""
 
 import os
-import uuid
-from typing import List
-from redis.asyncio import Redis
-import aiohttp
+import asyncio
+from datetime import datetime, timezone
+from typing import List, Dict, Any, Optional
+from contextlib import asynccontextmanager
 
-from omega.core.models.task_models import TaskEnvelope, TaskStatus
+import httpx
+import uvicorn
+from fastapi import FastAPI
+from pydantic import BaseModel
 
-class CapabilityMatcherAgent:
-    """
-    Advanced capability matcher that routes tasks to the most appropriate agents
-    based on sophisticated capability matching.
-    """
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+AGENT_ID = "capability_matcher_001"
+AGENT_NAME = "Capability Matcher Agent"
+AGENT_DESCRIPTION = "Intelligent capability matching agent that finds the best agents for specific tasks"
+AGENT_SKILLS = [
+    "capability_matching",
+    "agent_discovery",
+    "skill_analysis", 
+    "task_routing",
+    "intelligent_scoring",
+    "agent_recommendation",
+    "workflow_routing"
+]
+AGENT_TAGS = ["matching", "discovery", "routing", "intelligence", "coordination"]
+
+PORT = int(os.getenv("PORT", 9008))
+MCP_PORT = int(os.getenv("MCP_PORT", 9009))
+REGISTRY_URL = os.getenv("REGISTRY_URL", "http://agent_registry:9401")
+MCP_REGISTRY_URL = os.getenv("MCP_REGISTRY_URL", "http://mcp_registry:9402")
+
+print(f"🚀 {AGENT_NAME} Configuration:")
+print(f"   Agent ID: {AGENT_ID}")
+print(f"   Port: {PORT}")
+print(f"   Registry: {REGISTRY_URL}")
+print(f"   MCP Registry: {MCP_REGISTRY_URL}")
+
+# ============================================================================
+# PYDANTIC MODELS
+# ============================================================================
+
+class AgentInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    version: str = "1.0.0"
+    skills: List[str] = []
+    agent_type: str = "agent"
+    host: str = "localhost"
+    port: int = PORT
+    mcp_port: int = MCP_PORT
+    tags: List[str] = []
+    status: str = "active"
+
+class CapabilityRequest(BaseModel):
+    query: str
+    requirements: List[str] = []
+    min_score: float = 0.5
+    max_results: int = 5
+
+class AgentMatch(BaseModel):
+    agent_id: str
+    name: str
+    score: float
+    matching_skills: List[str]
+    matching_tags: List[str]
+    description: str
+    confidence: str  # high, medium, low
+    endpoints: Dict[str, str]
+
+class MatchResponse(BaseModel):
+    matches: List[AgentMatch]
+    query: str
+    total_found: int
+    best_match: Optional[AgentMatch] = None
+    timestamp: str
+    success: bool = True
+
+class RouteRequest(BaseModel):
+    task_description: str
+    required_capabilities: List[str] = []
+    context: Optional[str] = None
+
+class RouteResponse(BaseModel):
+    recommended_agent: Optional[AgentMatch] = None
+    alternative_agents: List[AgentMatch] = []
+    routing_confidence: float
+    reasoning: str
+    timestamp: str
+    success: bool = True
+
+# ============================================================================
+# LIFESPAN HANDLERS
+# ============================================================================
+
+# Global variables
+registered = False
+heartbeat_task = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Modern FastAPI lifespan handler."""
+    global heartbeat_task
     
-    MATCHER_STREAM_IN = "task.to_match"
-    MATCHER_STREAM_OUT = "task.dispatch"
+    # Startup
+    print(f"🚀 Starting {AGENT_NAME} on port {PORT}")
+    print("⏳ Waiting for registry to be ready...")
+    await asyncio.sleep(15)
     
-    def __init__(self):
-        self.redis = Redis(
-            host=os.getenv("REDIS_HOST", "redis"),
-            port=int(os.getenv("REDIS_PORT", 6379)),
-            decode_responses=True,
-        )
-        
-        self.registry_url = os.getenv("REGISTRY_URL", "http://registry:9401")
-        self.session = None
+    print("🔄 Attempting registry registration...")
+    await register_with_registry()
     
-    async def initialize(self):
-        """Initialize the matcher"""
-        self.session = aiohttp.ClientSession()
+    heartbeat_task = asyncio.create_task(send_heartbeat())
+    print("💓 Heartbeat task started")
+    print(f"✅ {AGENT_NAME} is fully operational!")
     
-    async def close(self):
-        """Close resources"""
-        if self.session:
-            await self.session.close()
+    yield  # App runs here
     
-    async def run(self):
-        """Run the capability matcher service"""
-        await self.initialize()
-        
+    # Shutdown
+    print(f"👋 {AGENT_NAME} shutting down...")
+    if heartbeat_task:
+        heartbeat_task.cancel()
         try:
-            group = "matcher-grp"
-            consumer = f"matcher-{uuid.uuid4().hex[:6]}"
-            
-            try:
-                await self.redis.xgroup_create(self.MATCHER_STREAM_IN, group, mkstream=True)
-            except Exception:
-                pass
-            
-            print("🔍 CapabilityMatcher listening…")
-            while True:
-                resp = await self.redis.xreadgroup(
-                    groupname=group,
-                    consumername=consumer,
-                    streams={self.MATCHER_STREAM_IN: ">"},
-                    count=1,
-                    block=5_000,
-                )
-                
-                if not resp:
-                    continue
-                
-                _, messages = resp[0]
-                for _id, data in messages:
-                    try:
-                        env = TaskEnvelope.model_validate_json(data["payload"])
-                        
-                        # Skip if already assigned
-                        if env.header.assigned_agent:
-                            continue
-                        
-                        # Match capabilities
-                        required_capabilities = env.task.required_capabilities
-                        if not required_capabilities:
-                            print("⚠️ Task has no required capabilities, using fallback")
-                            env.header.assigned_agent = "fallback_agent"
-                        else:
-                            await self._match_and_assign_agent(env, required_capabilities)
-                        
-                        # Route to assigned agent
-                        if env.header.assigned_agent:
-                            # Push to winner's inbox
-                            await self.redis.xadd(
-                                f"{env.header.assigned_agent}.inbox",
-                                {"payload": env.model_dump_json()},
-                            )
-                            
-                            # Audit copy
-                            await self.redis.xadd(
-                                self.MATCHER_STREAM_OUT, 
-                                {"payload": env.model_dump_json()}
-                            )
-                        else:
-                            print("❌ Could not assign an agent for task")
-                            env.status = TaskStatus.REJECTED
-                            env.message = "No suitable agent found for required capabilities"
-                            
-                            # Send rejection notification
-                            await self.redis.xadd(
-                                "task.events",
-                                {"payload": env.model_dump_json()}
-                            )
-                    
-                    except Exception as e:
-                        print(f"❌ Error in capability matcher: {str(e)}")
-                    
-                    finally:
-                        await self.redis.xack(self.MATCHER_STREAM_IN, group, _id)
-        
-        finally:
-            await self.close()
+            await heartbeat_task
+        except asyncio.CancelledError:
+            pass
+    print(f"✅ {AGENT_NAME} shutdown complete")
+
+app = FastAPI(
+    title=f"OMEGA {AGENT_NAME}",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# ============================================================================
+# REGISTRY INTEGRATION
+# ============================================================================
+
+async def register_with_registry():
+    """Register this agent with the OMEGA registry."""
+    global registered
     
-    async def _match_and_assign_agent(self, env: TaskEnvelope, required_capabilities: List[str]):
-        """Match and assign the best agent for the required capabilities"""
-        if not self.session:
-            self.session = aiohttp.ClientSession()
-        
-        # For each capability, find matching agents
-        capability_matches = {}
-        
-        for capability in required_capabilities:
-            try:
-                async with self.session.post(
-                    f"{self.registry_url}/registry/capabilities/match",
-                    json={"text": capability, "min_score": 0.6}
-                ) as response:
-                    if response.status == 200:
-                        matches = await response.json()
-                        if matches:
-                            capability_matches[capability] = matches
+    agent_info = AgentInfo(
+        id=AGENT_ID,
+        name=AGENT_NAME,
+        description=AGENT_DESCRIPTION,
+        skills=AGENT_SKILLS,
+        tags=AGENT_TAGS,
+        host="capability_matcher",  # Docker service name
+        port=PORT,
+        mcp_port=MCP_PORT
+    )
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{REGISTRY_URL}/agents/register",
+                json=agent_info.model_dump(),
+                timeout=10.0
+            )
             
+            if response.status_code == 200:
+                print(f"✅ Successfully registered {AGENT_NAME}")
+                registered = True
+                return True
+            else:
+                print(f"❌ Registration failed: {response.status_code}")
+                return False
+                
+    except Exception as e:
+        print(f"❌ Registry connection failed: {e}")
+        return False
+
+async def send_heartbeat():
+    """Send periodic heartbeats to the registry."""
+    while True:
+        if registered:
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        f"{REGISTRY_URL}/agents/heartbeat",
+                        json={"agent_id": AGENT_ID},
+                        timeout=5.0
+                    )
+                    
+                    if response.status_code == 200:
+                        print(f"💓 Capability Matcher heartbeat sent")
+                    else:
+                        print(f"⚠️ Heartbeat failed: {response.status_code}")
+                        
             except Exception as e:
-                print(f"❌ Error matching capability '{capability}': {str(e)}")
+                print(f"❌ Heartbeat error: {e}")
         
-        # If no matches for any capability, return
-        if not capability_matches:
-            env.header.assigned_agent = "fallback_agent"
-            env.header.candidate_agents = ["fallback_agent"]
-            return
-        
-        # Find the best overall agent
-        # Simple approach: use the agent with the highest average score across matched capabilities
-        agent_scores = {}
-        
-        for capability, matches in capability_matches.items():
-            for match in matches:
-                agent_id = match["agent_id"]
-                score = match["score"]
+        await asyncio.sleep(30)
+
+# ============================================================================
+# AGENT DISCOVERY & ANALYSIS
+# ============================================================================
+
+async def get_all_agents():
+    """Fetch all available agents from the registry."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{REGISTRY_URL}/agents", timeout=10.0)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("agents", [])
+            else:
+                print(f"⚠️ Failed to fetch agents: {response.status_code}")
+                return []
                 
-                if agent_id not in agent_scores:
-                    agent_scores[agent_id] = {"total": 0, "count": 0}
-                
-                agent_scores[agent_id]["total"] += score
-                agent_scores[agent_id]["count"] += 1
+    except Exception as e:
+        print(f"❌ Error fetching agents: {e}")
+        return []
+
+def calculate_capability_score(agent: dict, query: str, requirements: List[str]) -> tuple[float, List[str], List[str]]:
+    """
+    Calculate how well an agent matches the capability requirements.
+    Returns (score, matching_skills, matching_tags)
+    """
+    score = 0.0
+    matching_skills = []
+    matching_tags = []
+    
+    # Get agent data
+    skills = agent.get("skills", [])
+    tags = agent.get("tags", [])
+    description = agent.get("description", "").lower()
+    name = agent.get("name", "").lower()
+    
+    query_lower = query.lower()
+    query_words = set(query_lower.split())
+    
+    # Score based on exact skill matches (highest weight)
+    for skill in skills:
+        skill_lower = skill.lower()
+        skill_words = set(skill_lower.replace("_", " ").split())
         
-        # Calculate average scores
-        for agent_id, data in agent_scores.items():
-            data["average"] = data["total"] / data["count"]
+        if skill_lower in query_lower:
+            score += 1.0  # Exact skill match
+            matching_skills.append(skill)
+        elif query_words.intersection(skill_words):
+            score += 0.7  # Partial skill match
+            matching_skills.append(skill)
+    
+    # Score based on tag matches (medium weight)
+    for tag in tags:
+        tag_lower = tag.lower()
+        if tag_lower in query_lower:
+            score += 0.6  # Direct tag match
+            matching_tags.append(tag)
+        elif any(word in tag_lower for word in query_words):
+            score += 0.4  # Partial tag match
+            matching_tags.append(tag)
+    
+    # Score based on description and name matches (lower weight)
+    description_matches = sum(1 for word in query_words if word in description)
+    name_matches = sum(1 for word in query_words if word in name)
+    
+    score += description_matches * 0.3
+    score += name_matches * 0.5
+    
+    # Score based on specific requirements
+    for req in requirements:
+        req_lower = req.lower()
+        req_words = set(req_lower.split())
         
-        # Sort by average score
-        sorted_agents = sorted(
-            agent_scores.items(),
-            key=lambda item: item[1]["average"],
-            reverse=True
+        # Check skills
+        for skill in skills:
+            skill_lower = skill.lower()
+            if req_lower in skill_lower or skill_lower in req_lower:
+                score += 0.8
+                if skill not in matching_skills:
+                    matching_skills.append(skill)
+        
+        # Check tags
+        for tag in tags:
+            tag_lower = tag.lower()
+            if req_lower in tag_lower or tag_lower in req_lower:
+                score += 0.6
+                if tag not in matching_tags:
+                    matching_tags.append(tag)
+    
+    # Normalize score based on query complexity
+    max_possible_score = len(query_words) + len(requirements) + 1
+    normalized_score = min(score / max_possible_score, 1.0)
+    
+    return normalized_score, matching_skills, matching_tags
+
+def determine_confidence(score: float) -> str:
+    """Determine confidence level based on score."""
+    if score >= 0.8:
+        return "high"
+    elif score >= 0.5:
+        return "medium"
+    else:
+        return "low"
+
+# ============================================================================
+# CORE MATCHING FUNCTIONS
+# ============================================================================
+
+async def match_capabilities(query: str, requirements: List[str] = None, 
+                           min_score: float = 0.5, max_results: int = 5) -> List[AgentMatch]:
+    """Find the best agents for a given capability request."""
+    print(f"🔍 Matching capabilities for: '{query}'")
+    
+    requirements = requirements or []
+    agents = await get_all_agents()
+    
+    if not agents:
+        print("⚠️ No agents available for matching")
+        return []
+    
+    # Score and filter agents
+    scored_agents = []
+    for agent in agents:
+        # Skip self
+        if agent.get("id") == AGENT_ID:
+            continue
+            
+        score, matching_skills, matching_tags = calculate_capability_score(
+            agent, query, requirements
         )
         
-        # Assign the winner
-        if sorted_agents:
-            winner = sorted_agents[0][0]
-            env.header.assigned_agent = winner
-            env.header.candidate_agents = [agent_id for agent_id, _ in sorted_agents]
+        if score >= min_score:
+            confidence = determine_confidence(score)
+            
+            scored_agents.append(AgentMatch(
+                agent_id=agent.get("id", ""),
+                name=agent.get("name", "Unknown"),
+                score=round(score, 3),
+                matching_skills=matching_skills,
+                matching_tags=matching_tags,
+                description=agent.get("description", ""),
+                confidence=confidence,
+                endpoints={
+                    "api": f"http://{agent.get('host', 'localhost')}:{agent.get('port', 8000)}",
+                    "mcp": f"http://{agent.get('host', 'localhost')}:{agent.get('mcp_port', 9000)}" 
+                        if agent.get('mcp_port') else None
+                }
+            ))
+    
+    # Sort by score (highest first) and limit results
+    scored_agents.sort(key=lambda x: x.score, reverse=True)
+    return scored_agents[:max_results]
+
+async def route_task(task_description: str, required_capabilities: List[str] = None, 
+                    context: str = None) -> tuple[Optional[AgentMatch], List[AgentMatch], str]:
+    """Route a task to the best agent with reasoning."""
+    
+    # Combine task description and context for matching
+    full_query = task_description
+    if context:
+        full_query += f" {context}"
+    
+    matches = await match_capabilities(
+        query=full_query,
+        requirements=required_capabilities or [],
+        min_score=0.3,
+        max_results=10
+    )
+    
+    if not matches:
+        return None, [], "No suitable agents found for this task"
+    
+    best_match = matches[0]
+    alternatives = matches[1:5]  # Top 4 alternatives
+    
+    # Generate reasoning
+    reasoning = f"Selected '{best_match.name}' (score: {best_match.score}) because it matches "
+    
+    if best_match.matching_skills:
+        reasoning += f"skills: {', '.join(best_match.matching_skills[:3])}"
+    
+    if best_match.matching_tags:
+        if best_match.matching_skills:
+            reasoning += " and "
+        reasoning += f"tags: {', '.join(best_match.matching_tags[:3])}"
+    
+    reasoning += f". Confidence: {best_match.confidence}"
+    
+    return best_match, alternatives, reasoning
+
+# ============================================================================
+# API ENDPOINTS
+# ============================================================================
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "agent_id": AGENT_ID,
+        "name": AGENT_NAME,
+        "registered": registered,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/info")
+async def agent_info():
+    """Get agent information."""
+    return {
+        "id": AGENT_ID,
+        "name": AGENT_NAME,
+        "description": AGENT_DESCRIPTION,
+        "version": "1.0.0",
+        "skills": AGENT_SKILLS,
+        "tags": AGENT_TAGS,
+        "status": "active",
+        "registered": registered,
+        "ports": {"api": PORT, "mcp": MCP_PORT}
+    }
+
+@app.post("/match", response_model=MatchResponse)
+async def match_capabilities_endpoint(request: CapabilityRequest):
+    """Find the best agents for a given capability request."""
+    print(f"🔍 Capability matching request: '{request.query}'")
+    
+    try:
+        matches = await match_capabilities(
+            query=request.query,
+            requirements=request.requirements,
+            min_score=request.min_score,
+            max_results=request.max_results
+        )
+        
+        best_match = matches[0] if matches else None
+        
+        return MatchResponse(
+            matches=matches,
+            query=request.query,
+            total_found=len(matches),
+            best_match=best_match,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            success=True
+        )
+        
+    except Exception as e:
+        print(f"❌ Capability matching error: {e}")
+        return MatchResponse(
+            matches=[],
+            query=request.query,
+            total_found=0,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            success=False
+        )
+
+@app.post("/route", response_model=RouteResponse)
+async def route_task_endpoint(request: RouteRequest):
+    """Route a task to the best available agent."""
+    print(f"🎯 Task routing request: '{request.task_description[:100]}...'")
+    
+    try:
+        recommended, alternatives, reasoning = await route_task(
+            task_description=request.task_description,
+            required_capabilities=request.required_capabilities,
+            context=request.context
+        )
+        
+        routing_confidence = recommended.score if recommended else 0.0
+        
+        return RouteResponse(
+            recommended_agent=recommended,
+            alternative_agents=alternatives,
+            routing_confidence=routing_confidence,
+            reasoning=reasoning,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            success=True
+        )
+        
+    except Exception as e:
+        print(f"❌ Task routing error: {e}")
+        return RouteResponse(
+            routing_confidence=0.0,
+            reasoning=f"Error occurred during routing: {str(e)}",
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            success=False
+        )
+
+@app.get("/agents")
+async def list_all_agents():
+    """List all available agents in the registry."""
+    agents = await get_all_agents()
+    return {
+        "agents": agents,
+        "count": len(agents),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.post("/ping")
+async def ping():
+    """Simple ping endpoint."""
+    return {
+        "message": "pong",
+        "agent_id": AGENT_ID,
+        "service": "capability_matcher",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+if __name__ == "__main__":
+    print(f"🌟 OMEGA {AGENT_NAME} starting on port {PORT}")
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=PORT,
+        log_level="info"
+    )

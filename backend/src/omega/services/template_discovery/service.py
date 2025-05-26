@@ -1,4 +1,4 @@
-# omega/services/template_discovery/service.pys
+# omega/services/template_discovery/service.py
 
 from typing import Dict, List, Optional
 

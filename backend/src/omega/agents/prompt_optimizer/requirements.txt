@@ -1,24 +1,24 @@
 # Core libraries
-fastapi
-uvicorn
-redis
-pydantic
-aiohttp
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+httpx>=0.25.0
+pydantic>=2.4.0
+openai>=1.75.0
 
-# A2A Protocol support
-python-a2a
-# If not available via pip, install from GitHub:
-# git+https://github.com/themanojdesai/python-a2a.git
+# # A2A Protocol support
+# python-a2a
+# # If not available via pip, install from GitHub:
+# # git+https://github.com/themanojdesai/python-a2a.git
 
-# Model Context Protocol (MCP) support
-fastmcp
-# If not available via pip, you might need to install from the source
+# # Model Context Protocol (MCP) support
+# fastmcp
+# # If not available via pip, you might need to install from the source
 
-# Typing support
-typing-extensions
+# # Typing support
+# typing-extensions
 
-# Async support
-asyncio
+# # Async support
+# asyncio
 
-# Utils
-uuid
+# # Utils
+# uuid

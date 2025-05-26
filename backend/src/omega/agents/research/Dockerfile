@@ -1,20 +1,35 @@
+# Standardized Dockerfile for OMEGA Agents/Services/Tools
 FROM python:3.13.2-slim
 
+# Set working directory
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the entire OMEGA source code
 COPY . .
 
-ENV PORT=9010
-ENV MCP_PORT=9011
-ENV REDIS_HOST=redis
-ENV REDIS_PORT=6379
-ENV REGISTRY_URL=http://registry:9401
+# Install OMEGA in development mode
+RUN pip install -e .
 
-# Add OpenAI API key env var (this will be overridden at runtime)
-ENV OPENAI_API_KEY=""
+# Create non-root user for security
+RUN adduser --disabled-password --gecos '' omega && \
+    chown -R omega:omega /app
+USER omega
 
-# Run the agent
-CMD ["python", "agent.py"]
+# Health check endpoint (all agents/services should have this)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+
+# Default command - to be overridden in docker-compose
+CMD ["python", "-m", "omega.cli.agent"]

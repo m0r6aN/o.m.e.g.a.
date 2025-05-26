@@ -1,8 +1,5 @@
 # agents/capability_matcher/requirements.txt
-fastapi
-uvicorn
-redis
-pydantic
-aiohttp
-asyncio
-python-dotenv
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+httpx>=0.25.0
+pydantic>=2.4.0
