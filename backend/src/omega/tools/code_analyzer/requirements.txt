@@ -4,13 +4,7 @@ motor>=3.1.1           # Async MongoDB driver
 pymongo>=4.3.3         # MongoDB driver
 fastapi>=0.88.0        # For API endpoints
 uvicorn>=0.20.0        # ASGI server for FastAPI
-
-# OMEGA Framework dependencies
-# These would typically be installed with the framework
-# but are listed here for completeness
 python-a2a>=0.1.0      # A2A protocol support
-registerable_mcp_tool  # MCP tool registration
-registerable_dual_mode_agent  # Dual mode agent support
 
 # Testing dependencies
 pytest>=7.2.0          # Testing framework

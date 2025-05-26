@@ -1,24 +1,20 @@
+# D:/Repos/o.m.e.g.a/backend/src/omega/tools/code_analyzer/tool.py
+
 """
 CodeAnalyzerTool: A RegisterableMCPTool for the OMEGA Framework.
 Scans repositories, identifies languages, parses files, extracts structure and dependencies.
 
-Author: Claude
+Author: The OMEGA Dream Team
 Version: 1.0.0
 """
 
 import os
 import ast
 import logging
-import uuid
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict
 from pathlib import Path
 import esprima  # For JavaScript parsing
-from registerable_mcp_tool import RegisterableMCPTool
-from omega.utils.db import MongoDBClient
-from omega.core.models.analysis_models import Component, Dependency, AnalysisResult
-
-# Import our enhanced dependency tracking
-from enhanced_dependency_tracking import resolve_dependencies
+from omega.core.registerable_mcp_tool import RegisterableMCPTool
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -40,21 +36,7 @@ class CodeAnalyzer:
         self.components: List[Component] = []
         self.dependencies: List[Dependency] = []
         self.file_tree: Dict = {}
-        
-d dependencies
-        self.extract_components_and_dependencies()
-        logger.info(f"Extracted {len(self.components)} components and {len(self.dependencies)} dependencies")
-        
-        # Create and return the analysis result
-        result = AnalysisResult(
-            analysis_id=self.analysis_id,
-            file_tree=self.file_tree,
-            components=self.components,
-            dependencies=self.dependencies
-        )
-        
-        logger.info(f"Analysis complete for {self.analysis_id}")
-        return result
+        # No return statement in __init__ - that was the bug!
     
     def _count_files(self, tree: Dict) -> int:
         """Helper method to count files in the file tree."""
@@ -181,6 +163,30 @@ d dependencies
             
         except Exception as e:
             logger.error(f"Error parsing JavaScript file {rel_path}: {e}")
+
+    def analyze(self) -> AnalysisResult:
+        """
+        Performs the code analysis and returns the result.
+        This is the NEW method that actually does the work!
+        """
+        # Build and assign file tree
+        self.file_tree = self.build_file_tree()
+        
+        # Extract components and dependencies
+        self.extract_components_and_dependencies()
+        
+        logger.info(f"Extracted {len(self.components)} components and {len(self.dependencies)} dependencies")
+
+        # Create and return the analysis result
+        result = AnalysisResult(
+            analysis_id=self.analysis_id,
+            file_tree=self.file_tree,
+            components=self.components,
+            dependencies=self.dependencies
+        )
+        
+        logger.info(f"Analysis complete for {self.analysis_id}")
+        return result
 
 
 class PythonComponentVisitor(ast.NodeVisitor):
@@ -638,6 +644,30 @@ class JavaScriptComponentVisitor:
     def visit_ClassDeclaration(self, node):
         """Process class declarations."""
         # Store the previous context
+        prev_class = self.current_class
+        
+        # Set current context
+        if hasattr(node, 'id') and node.id and hasattr(node.id, 'name'):
+            class_name = node.id.name
+            self.current_class = class_name
+            
+            # Add to local names
+            self.local_names.add(class_name)
+            
+            # Add the class as a component
+            self.components.append(Component(
+                type="class",
+                name=class_name,
+                path=f"{self.file_path}:{class_name}"
+            ))
+            
+            # Visit class body
+            if hasattr(node, 'body') and hasattr(node.body, 'body'):
+                for child in node.body.body:
+                    self.visit(child)
+        
+        # Restore the previous context
+        self.current_class = prev_class
 
 
 # Register the tool function
@@ -655,11 +685,13 @@ def analyze_repo(repo_path: str, analysis_id: str) -> dict:
     logger.info(f"Starting code analysis for repo: {repo_path}, analysis_id: {analysis_id}")
     
     analyzer = CodeAnalyzer(repo_path, analysis_id)
-    result = analyzer.analyze()
+    result = analyzer.analyze()  # Now this calls the proper analyze method!
     
-    # Persist to MongoDB
+    # Persist to MongoDB - make this configurable for Docker
     try:
-        db = MongoDBClient("mongodb://localhost:27017", "omega")
+        # Use environment variable for MongoDB connection in containerized setup
+        mongo_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+        db = MongoDBClient(mongo_url, "omega")
         db.insert_one("analyses", result.dict())
         logger.info(f"Analysis result saved to MongoDB, analysis_id: {analysis_id}")
     except Exception as e:
