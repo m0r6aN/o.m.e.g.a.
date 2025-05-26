@@ -1,4 +1,5 @@
-# tools/nlp_to_sql/tool.py
+# D:/Repos/o.m.e.g.a/backend/src/omega/tools/nlp_to_sql/tool.py
+
 from omega.core.registerable_mcp_tool import RegisterableMCPTool
 
 def nlp_to_sql(natural_language: str, schema: str = None) -> str:

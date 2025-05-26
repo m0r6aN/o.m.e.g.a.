@@ -1,4 +1,5 @@
-# tools/translate_text/tool.py
+# D:/Repos/o.m.e.g.a/backend/src/omega/tools/translate_text/tool.py
+
 from googletrans import Translator
 from omega.core.registerable_mcp_tool import RegisterableMCPTool
 

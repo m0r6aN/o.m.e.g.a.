@@ -1,15 +1,22 @@
 D:\Repos\o.m.e.g.a/
 ├── Directory_Structure.md
 ├── README.md
-├── a2a-workflow-diagram.svg
 ├── backend
 │   D:\Repos\o.m.e.g.a\backend/
 │   ├── .python-version
 │   ├── __init__.py
+│   ├── data
+│   │   D:\Repos\o.m.e.g.a\backend\data/
 │   ├── docker-compose.yml
+│   ├── docs
+│   │   D:\Repos\o.m.e.g.a\backend\docs/
+│   │   └── agent-tests.md
+│   ├── logs
+│   │   D:\Repos\o.m.e.g.a\backend\logs/
 │   ├── main.py
 │   ├── pyproject.toml
 │   ├── requirements.txt
+│   ├── setup.py
 │   ├── src
 │   │   D:\Repos\o.m.e.g.a\backend\src/
 │   │   └── omega
@@ -55,6 +62,7 @@ D:\Repos\o.m.e.g.a/
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\project_architect/
 │   │       │   │   ├── Dockerfile
 │   │       │   │   ├── agent.py
+│   │       │   │   ├── agent.py.backup
 │   │       │   │   └── requirements.txt
 │   │       │   ├── prompt_optimizer
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\agents\prompt_optimizer/
@@ -78,6 +86,7 @@ D:\Repos\o.m.e.g.a/
 │   │       │       └── requirements.txt
 │   │       ├── cli
 │   │       │   D:\Repos\o.m.e.g.a\backend\src\omega\cli/
+│   │       │   └── __init__.py
 │   │       ├── core
 │   │       │   D:\Repos\o.m.e.g.a\backend\src\omega\core/
 │   │       │   ├── __init__.py
@@ -149,7 +158,7 @@ D:\Repos\o.m.e.g.a/
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\services\mcp_registry/
 │   │       │   │   ├── Dockerfile
 │   │       │   │   ├── requirements.txt
-│   │       │   │   └── service
+│   │       │   │   └── service.py
 │   │       │   └── template_discovery
 │   │       │       D:\Repos\o.m.e.g.a\backend\src\omega\services\template_discovery/
 │   │       │       ├── Dockerfile
@@ -171,6 +180,9 @@ D:\Repos\o.m.e.g.a/
 │   │       │   │   ├── requirements.txt
 │   │       │   │   ├── test_dependency_resolver.py
 │   │       │   │   └── tool.py
+│   │       │   ├── context7
+│   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\tools\context7/
+│   │       │   │   └── Dockerfile
 │   │       │   ├── execute_sql
 │   │       │   │   D:\Repos\o.m.e.g.a\backend\src\omega\tools\execute_sql/
 │   │       │   │   ├── Dockerfile
@@ -217,13 +229,19 @@ D:\Repos\o.m.e.g.a/
 │   │   ├── dual_mode_base.py
 │   │   ├── e2e_test_orchestrator.py
 │   │   ├── e2e_trigger.py
+│   │   ├── integration
+│   │   │   D:\Repos\o.m.e.g.a\backend\tests\integration/
+│   │   │   └── __init__.py
 │   │   ├── redis_test.py
 │   │   ├── run_finance_agent.py
 │   │   ├── run_research_agent.py
 │   │   ├── run_triage_agent_flow.py
 │   │   ├── temp.py
 │   │   ├── test_capability_matching.py
-│   │   └── test_migration_assistant_agent.py
+│   │   ├── test_migration_assistant_agent.py
+│   │   └── unit
+│   │       D:\Repos\o.m.e.g.a\backend\tests\unit/
+│   │       └── __init__.py
 ├── dev_ops
 │   D:\Repos\o.m.e.g.a\dev_ops/
 │   └── github_workflows_ci.yaml
@@ -236,6 +254,7 @@ D:\Repos\o.m.e.g.a/
 │   ├── instructions.txt
 │   ├── mcp-integration-guide.md
 │   ├── omega-next-steps.md
+│   ├── omega_progress_report.md
 │   ├── tool_builder_pattern.md
 │   ├── write_code (1).zip
 │   └── write_code.zip
@@ -438,6 +457,10 @@ D:\Repos\o.m.e.g.a/
 │   ├── websocket-integration-summary.md
 │   └── workflow-builder-integration-summary.md
 ├── index.html
+├── keys
+│   D:\Repos\o.m.e.g.a\keys/
+│   ├── claude
+│   └── claude.pub
 ├── package-lock.json
 ├── package.json
 └── temp.py

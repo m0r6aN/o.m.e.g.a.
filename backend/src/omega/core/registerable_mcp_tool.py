@@ -1,16 +1,13 @@
 import os
 import time
 import threading
-import json
 import requests
 import uvicorn
-from typing import List, Dict, Any, Optional, Callable
-from fastapi import FastAPI, HTTPException
+from typing import List, Dict, Any, Callable
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
-from fastmcp import MCPServer, text_response, Tool
-
 
 class ToolCapability(BaseModel):
     """Model for MCP tool capability"""

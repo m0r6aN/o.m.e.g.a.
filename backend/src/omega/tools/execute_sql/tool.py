@@ -1,4 +1,5 @@
-# tools/execute_sql/tool.py
+# D:/Repos/o.m.e.g.a/backend/src/omega/tools/execute_sql/tool.py
+
 import sqlite3
 from typing import Dict, Any
 from omega.core.registerable_mcp_tool import RegisterableMCPTool

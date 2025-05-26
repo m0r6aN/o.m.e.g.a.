@@ -241,6 +241,28 @@ services:
       - omega_network
     restart: unless-stopped
 
+  code_analyzer:
+    build:
+      context: ./src
+      dockerfile: ./omega/tools/code_analyzer/Dockerfile
+    ports:
+      - "9208:9208"
+    environment:
+      - PORT=9208
+      - MCP_PORT=9209
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REGISTRY_URL=http://agent_registry:9401
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      redis:
+        condition: service_healthy
+      agent_registry:
+        condition: service_started
+    networks:
+      - omega_network
+    restart: unless-stopped
+
 networks:
   omega_network:
     driver: bridge

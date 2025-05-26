@@ -1,3 +1,5 @@
+# D:/Repos/o.m.e.g.a/backend/src/omega/tools/calculator/tool.py
+
 import os
 from omega.core.registerable_mcp_tool import RegisterableMCPTool
 from fastmcp import text_response

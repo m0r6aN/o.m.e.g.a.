@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# d:/Repos/o.m.e.g.a/backend/src/omega/agents/workflow_planner/agent.py
 """
 OMEGA Workflow Planner Agent - Modern Self-Contained Version
 Creates optimized workflow plans with task dependencies and parallel execution paths.
@@ -223,51 +223,44 @@ async def send_heartbeat():
         await asyncio.sleep(30)
 
 # ============================================================================
-# OPENAI INTEGRATION
+# OPENAI INTEGRATION - FIXED VERSION
 # ============================================================================
 
 async def call_openai_for_planning(prompt: str, context: str = None, optimization_level: str = "balanced") -> Dict[str, Any]:
-    """Call OpenAI to create a structured workflow plan."""
+    """Call OpenAI to create a structured workflow plan with JSON parsing fallback."""
     if not openai_client:
         raise ValueError("OpenAI client not initialized - check OPENAI_API_KEY")
     
-    # Define the task schema for structured output
-    task_schema = {
-        "type": "object",
-        "properties": {
-            "tasks": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "id": {"type": "string"},
-                        "name": {"type": "string"},
-                        "description": {"type": "string"},
-                        "category": {"type": "string"},
-                        "required_capabilities": {"type": "array", "items": {"type": "string"}},
-                        "dependencies": {"type": "array", "items": {"type": "string"}},
-                        "parallelizable": {"type": "boolean"},
-                        "estimated_duration": {"type": "integer"},
-                        "priority": {"type": "string", "enum": ["low", "medium", "high", "critical"]}
-                    },
-                    "required": ["id", "name", "description", "category", "required_capabilities"]
-                }
-            }
-        },
-        "required": ["tasks"]
-    }
-    
-    # Build system message based on optimization level
+    # Define optimization instructions
     optimization_instructions = {
         "simple": "Create a straightforward workflow with minimal complexity and clear sequential steps.",
         "balanced": "Balance efficiency with thoroughness, including some parallel tasks and dependencies where beneficial.",
         "complex": "Create a highly optimized workflow with maximum parallelization, detailed dependencies, and sophisticated task breakdown."
     }
     
+    # Enhanced system message with explicit JSON structure
     system_message = f"""You are an expert Process Optimization Engine. Your goal is to break down complex processes into well-structured, optimized tasks.
 
 Optimization Level: {optimization_level}
 Instructions: {optimization_instructions.get(optimization_level, optimization_instructions["balanced"])}
+
+CRITICAL: You must return a valid JSON object with this EXACT structure:
+
+{{
+  "tasks": [
+    {{
+      "id": "unique_task_id",
+      "name": "Task Name",
+      "description": "Detailed task description",
+      "category": "planning|research|development|testing|deployment|design|documentation",
+      "required_capabilities": ["capability1", "capability2"],
+      "dependencies": ["task_id1", "task_id2"],
+      "parallelizable": true,
+      "estimated_duration": 30,
+      "priority": "low|medium|high|critical"
+    }}
+  ]
+}}
 
 Guidelines:
 1. Break down the process into logical, manageable tasks
@@ -281,25 +274,130 @@ Guidelines:
 
 Context: {context or "No additional context provided"}
 
-Return a JSON object with a 'tasks' array containing the structured workflow."""
+Remember: Return ONLY valid JSON, no other text or explanations."""
 
     try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": f"Create a workflow plan for: {prompt}"}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,
-            max_tokens=2500
-        )
-        
-        content = response.choices[0].message.content
-        return json.loads(content)
-        
+        # Try with structured output first (newer OpenAI models)
+        try:
+            response = openai_client.chat.completions.create(
+                model="gpt-4o-mini",  # Use gpt-4o-mini which supports response_format
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": f"Create a workflow plan for: {prompt}"}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=2500
+            )
+            
+            content = response.choices[0].message.content
+            return json.loads(content)
+            
+        except Exception as structured_error:
+            print(f"⚠️ Structured output failed, trying fallback: {structured_error}")
+            
+            # Fallback to regular completion with JSON parsing
+            response = openai_client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": f"Create a workflow plan for: {prompt}"}
+                ],
+                temperature=0.3,
+                max_tokens=2500
+            )
+            
+            content = response.choices[0].message.content
+            
+            # Try to extract JSON from the response
+            json_start = content.find('{')
+            json_end = content.rfind('}') + 1
+            
+            if json_start != -1 and json_end > json_start:
+                json_content = content[json_start:json_end]
+                return json.loads(json_content)
+            else:
+                # Manual JSON parsing as last resort
+                return parse_fallback_response(content, prompt)
+                
     except Exception as e:
-        raise Exception(f"OpenAI workflow planning failed: {str(e)}")
+        print(f"❌ OpenAI workflow planning failed: {str(e)}")
+        # Return a basic fallback workflow
+        return create_fallback_workflow(prompt)
+
+def parse_fallback_response(content: str, prompt: str) -> Dict[str, Any]:
+    """Parse non-JSON response and create a basic workflow."""
+    print("⚠️ Using fallback workflow parsing")
+    
+    # Create a simple workflow based on the prompt keywords
+    tasks = []
+    task_counter = 1
+    
+    # Basic task detection based on common patterns
+    if any(word in prompt.lower() for word in ['website', 'web', 'app', 'application']):
+        tasks.extend([
+            {
+                "id": f"task_{task_counter}",
+                "name": "Project Planning",
+                "description": "Define requirements and project scope",
+                "category": "planning",
+                "required_capabilities": ["project_planning", "requirements_analysis"],
+                "dependencies": [],
+                "parallelizable": False,
+                "estimated_duration": 30,
+                "priority": "high"
+            }
+        ])
+        task_counter += 1
+        
+        tasks.extend([
+            {
+                "id": f"task_{task_counter}",
+                "name": "Code Generation",
+                "description": f"Generate code for: {prompt}",
+                "category": "development",
+                "required_capabilities": ["code_generation", "web_development"],
+                "dependencies": [f"task_{task_counter-1}"],
+                "parallelizable": False,
+                "estimated_duration": 60,
+                "priority": "high"
+            }
+        ])
+    else:
+        # Generic task
+        tasks.append({
+            "id": "task_1",
+            "name": "Process Request",
+            "description": f"Handle request: {prompt}",
+            "category": "general",
+            "required_capabilities": ["general_processing"],
+            "dependencies": [],
+            "parallelizable": True,
+            "estimated_duration": 15,
+            "priority": "medium"
+        })
+    
+    return {"tasks": tasks}
+
+def create_fallback_workflow(prompt: str) -> Dict[str, Any]:
+    """Create a basic fallback workflow when OpenAI fails."""
+    print("⚠️ Creating emergency fallback workflow")
+    
+    return {
+        "tasks": [
+            {
+                "id": "fallback_task_1",
+                "name": "Manual Processing Required",
+                "description": f"Unable to auto-generate workflow for: {prompt}",
+                "category": "manual",
+                "required_capabilities": ["manual_processing"],
+                "dependencies": [],
+                "parallelizable": True,
+                "estimated_duration": 30,
+                "priority": "medium"
+            }
+        ]
+    }
 
 # ============================================================================
 # WORKFLOW ANALYSIS FUNCTIONS
