@@ -66,13 +66,11 @@ services:
       - "9402:9402"
     environment:
       - PORT=9402
-      - MONGODB_URL=mongodb://omega:omegapass@mongo:27017/mcp_registry?authSource=admin
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - MONGODB_URL=mongodb://omega:omegapass@mongo:27017/omega?authSource=admin
+      - MONGODB_NAME=omega  
+      - HEARTBEAT_TIMEOUT=60
     depends_on:
       mongo:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - omega_network

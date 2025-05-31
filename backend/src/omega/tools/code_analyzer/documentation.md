@@ -136,7 +136,7 @@ def use_analyzer(repo_path):
 ### Retrieving Analysis Results from MongoDB
 
 ```python
-from omega.utils.db import MongoDBClient
+from omega.core.utils.db import MongoDBClient
 
 async def get_analysis(analysis_id):
     db = MongoDBClient("mongodb://localhost:27017", "omega")

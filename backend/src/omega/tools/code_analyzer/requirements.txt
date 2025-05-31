@@ -1,18 +1,16 @@
+# D:/Repos/o.m.e.g.a/backend/src/omega/tools/code_analyzer/requirements.txt
+
 # Core dependencies
-esprima>=4.0.1         # JavaScript parsing
-motor>=3.1.1           # Async MongoDB driver
-pymongo>=4.3.3         # MongoDB driver
-fastapi>=0.88.0        # For API endpoints
-uvicorn>=0.20.0        # ASGI server for FastAPI
-python-a2a>=0.1.0      # A2A protocol support
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.4.0
+requests>=2.31.0
 
-# Testing dependencies
-pytest>=7.2.0          # Testing framework
-pytest-asyncio>=0.20.0 # Async testing support
-pytest-cov>=4.0.0      # Test coverage
+# Code analysis dependencies (optional but recommended)
+esprima>=4.0.1
 
-# Development dependencies
-black>=22.12.0         # Code formatting
-isort>=5.11.0          # Import sorting
-mypy>=0.991            # Type checking
-flake8>=6.0.0          # Linting
+# Database dependencies (optional)
+pymongo>=4.5.0
+
+# Additional utilities
+python-dotenv>=1.0.0
