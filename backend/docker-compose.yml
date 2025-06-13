@@ -1,7 +1,53 @@
+# OMEGA Constellation
+
+x-common-variables: &common-env
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REGISTRY_URL: http://agent_registry:9401
+  HEARTBEAT_INTERVAL: 30
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DEBUG: ${DEBUG:-false}
+
+x-agent-base: &agent-base
+  networks:
+    - omega_network
+  restart: unless-stopped
+  environment:
+    <<: *common-env
+    OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    CONTEXT7_API_KEY: ${CONTEXT7_API_KEY}
+  depends_on:
+    agent_registry:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+        cpus: '0.5'
+      reservations:
+        memory: 256M
+        cpus: '0.1'
+
 services:
-  # Core Infrastructure
+  # --- INFRASTRUCTURE LAYER ---
   redis:
     image: redis:7-alpine
+    container_name: omega_redis
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 256mb 
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --timeout 0
     ports:
       - "6379:6379"
     volumes:
@@ -10,263 +56,342 @@ services:
       - omega_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    command: redis-server --appendonly yes
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    user: "999:999"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
 
-  mongo:
-    image: mongo:7
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - omega_network
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-omega}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-omegapass}
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  # Core Services - Fixed Context
+  # --- SERVICE REGISTRY ---
   agent_registry:
     build:
-      context: ./src/omega/services/agent_registry
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: ./omega/services/agent_registry/Dockerfile
+      cache_from:
+        - python:3.12-slim
+    container_name: omega_agent_registry
     ports:
       - "9401:9401"
     environment:
-      - PORT=9401
-      - MONGODB_URL=mongodb://omega:omegapass@mongo:27017/agent_registry?authSource=admin
-      - MONGODB_NAME=agent_registry
-      - LOG_LEVEL=info
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      <<: *common-env
+      PORT: 9401
+      SERVICE_NAME: agent_registry
+    volumes:
+      - registry_data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9401/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     depends_on:
-      mongo:
-        condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - omega_network
-    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
 
-  mcp_registry:
-    build:
-      context: ./src/omega/services/mcp_registry
-      dockerfile: Dockerfile
-    ports:
-      - "9402:9402"
-    environment:
-      - PORT=9402
-      - MONGODB_URL=mongodb://omega:omegapass@mongo:27017/omega?authSource=admin
-      - MONGODB_NAME=omega  
-      - HEARTBEAT_TIMEOUT=60
-    depends_on:
-      mongo:
-        condition: service_healthy
-    networks:
-      - omega_network
-    restart: unless-stopped
-
-  # Core Agents - Fixed Context
+  # --- CORE AGENTS ---
   orchestrator:
+    <<: *agent-base
     build:
-      context: ./src/omega/agents/orchestrator
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: ./omega/agents/orchestrator/Dockerfile
+      args:
+        AGENT_NAME: orchestrator
+      cache_from:
+        - omega-agent-base:latest
+    container_name: omega_orchestrator
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      - PORT=9000
-      - MCP_PORT=9001
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REGISTRY_URL=http://agent_registry:9401
-      - MCP_REGISTRY_URL=http://mcp_registry:9402
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      redis:
-        condition: service_healthy
-      agent_registry:
-        condition: service_started
-    networks:
-      - omega_network
-    restart: unless-stopped
-
-  math_solver:
-    build:
-      context: ./src/omega/agents/math_solver
-      dockerfile: Dockerfile
-    ports:
-      - "9002:9002"
-      - "9003:9003"
-    environment:
-      - PORT=9002
-      - MCP_PORT=9003
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REGISTRY_URL=http://agent_registry:9401
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      redis:
-        condition: service_healthy
-      agent_registry:
-        condition: service_started
-    networks:
-      - omega_network
-    restart: unless-stopped
-
-  prompt_optimizer:
-    build:
-      context: ./src/omega/agents/prompt_optimizer
-      dockerfile: Dockerfile
-    ports:
-      - "9006:9006"
-      - "9007:9007"
-    environment:
-      - PORT=9006
-      - MCP_PORT=9007
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REGISTRY_URL=http://agent_registry:9401
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      redis:
-        condition: service_healthy
-      agent_registry:
-        condition: service_started
-    networks:
-      - omega_network
-    restart: unless-stopped
-
-  workflow_planner:
-    build:
-      context: ./src/omega/agents/workflow_planner
-      dockerfile: Dockerfile
-    ports:
-      - "9004:9004"
-      - "9005:9005"
-    environment:
-      - PORT=9004
-      - MCP_PORT=9005
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REGISTRY_URL=http://agent_registry:9401
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      redis:
-        condition: service_healthy
-      agent_registry:
-        condition: service_started
-    networks:
-      - omega_network
-    restart: unless-stopped
-
-  capability_matcher:
-    build:
-      context: ./src/omega/agents/capability_matcher
-      dockerfile: Dockerfile
-    ports:
-      - "9008:9008"
-      - "9009:9009"
-    environment:
-      - PORT=9008
-      - MCP_PORT=9009
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REGISTRY_URL=http://agent_registry:9401
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      redis:
-        condition: service_healthy
-      agent_registry:
-        condition: service_started
-    networks:
-      - omega_network
-    restart: unless-stopped
+      <<: *common-env
+      AGENT_NAME: orchestrator
+      PORT: 9000
+      MCP_PORT: 9001
+      DOCKER_SERVICE_NAME: orchestrator
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:9000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   code_generator:
+    <<: *agent-base
     build:
-      context: ./src/omega/agents/code_generator
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: ./omega/agents/code_generator/Dockerfile
+      args:
+        AGENT_NAME: code_generator
+    container_name: omega_code_generator
     ports:
       - "9014:9014"
       - "9015:9015"
     environment:
-      - PORT=9014
-      - MCP_PORT=9015
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REGISTRY_URL=http://agent_registry:9401
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      redis:
-        condition: service_healthy
-      agent_registry:
-        condition: service_started
-    networks:
-      - omega_network
-    restart: unless-stopped
+      <<: *common-env
+      AGENT_NAME: code_generator
+      PORT: 9014
+      MCP_PORT: 9015
+      DOCKER_SERVICE_NAME: code_generator
 
-  project_architect:
-    build:
-      context: ./src/omega/agents/project_architect
-      dockerfile: Dockerfile
-    ports:
-      - "9016:9016"
-      - "9017:9017"
-    environment:
-      - PORT=9016
-      - MCP_PORT=9017
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REGISTRY_URL=http://agent_registry:9401
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      redis:
-        condition: service_healthy
-      agent_registry:
-        condition: service_started
-    networks:
-      - omega_network
-    restart: unless-stopped
-
-  code_analyzer:
+  capability_matcher:
+    <<: *agent-base
     build:
       context: ./src
-      dockerfile: ./omega/tools/code_analyzer/Dockerfile
+      dockerfile: ./omega/agents/capability_matcher/Dockerfile
+      args:
+        AGENT_NAME: capability_matcher
+    container_name: omega_capability_matcher
     ports:
-      - "9208:9208"
+      - "9008:9008"
+      - "9009:9009"
     environment:
-      - PORT=9208
-      - MCP_PORT=9209
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REGISTRY_URL=http://agent_registry:9401
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      <<: *common-env
+      AGENT_NAME: capability_matcher
+      PORT: 9008
+      MCP_PORT: 9009
+      DOCKER_SERVICE_NAME: capability_matcher
+
+  prompt_optimizer:
+    <<: *agent-base
+    build:
+      context: ./src
+      dockerfile: ./omega/agents/prompt_optimizer/Dockerfile
+      args:
+        AGENT_NAME: prompt_optimizer
+    container_name: omega_prompt_optimizer
+    ports:
+      - "9006:9006"
+      - "9007:9007"
+    environment:
+      <<: *common-env
+      AGENT_NAME: prompt_optimizer
+      PORT: 9006
+      MCP_PORT: 9007
+      DOCKER_SERVICE_NAME: prompt_optimizer
+
+  # --- SPECIALIZED AGENTS ---
+  math_solver:
+    <<: *agent-base
+    build:
+      context: ./src
+      dockerfile: ./omega/agents/math_solver/Dockerfile
+      args:
+        AGENT_NAME: math_solver
+    container_name: omega_math_solver
+    ports:
+      - "9002:9002"
+      - "9003:9003"
+    environment:
+      <<: *common-env
+      AGENT_NAME: math_solver
+      PORT: 9002
+      MCP_PORT: 9003
+      DOCKER_SERVICE_NAME: math_solver
+
+  research:
+    <<: *agent-base
+    build:
+      context: ./src
+      dockerfile: ./omega/agents/research/Dockerfile
+      args:
+        AGENT_NAME: research
+    container_name: omega_research
+    ports:
+      - "9010:9010"
+      - "9011:9011"
+    environment:
+      <<: *common-env
+      AGENT_NAME: research
+      PORT: 9010
+      MCP_PORT: 9011
+      DOCKER_SERVICE_NAME: research
+
+  # --- MCP TOOLS ---
+  calculator_tool:
+    build:
+      context: ./src
+      dockerfile: ./omega/tools/calculator/Dockerfile
+    container_name: omega_calculator_tool
+    ports:
+      - "9202:9202"
+    environment:
+      <<: *common-env
+      PORT: 9202
+      TOOL_NAME: calculator
+    networks:
+      - omega_network
+    restart: unless-stopped
     depends_on:
-      redis:
-        condition: service_healthy
       agent_registry:
-        condition: service_started
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  web_search_tool:
+    build:
+      context: ./src
+      dockerfile: ./omega/tools/web_search/Dockerfile
+    container_name: omega_web_search_tool
+    ports:
+      - "9206:9206"
+    environment:
+      <<: *common-env
+      PORT: 9206
+      TOOL_NAME: web_search
+      SERPER_API_KEY: ${SERPER_API_KEY}
     networks:
       - omega_network
     restart: unless-stopped
 
+  # --- FRONTEND & MONITORING ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-production}
+    container_name: omega_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:9401
+      NEXT_PUBLIC_WS_URL: ws://localhost:9401
+      NODE_ENV: ${NODE_ENV:-production}
+    depends_on:
+      - agent_registry
+    networks:
+      - omega_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # --- MONITORING STACK ---
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: omega_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - omega_network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: omega_grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-omega123}
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - omega_network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+  # --- LOG AGGREGATION ---
+  loki:
+    image: grafana/loki:latest
+    container_name: omega_loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/tmp/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - omega_network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # --- REVERSE PROXY (Optional for production) ---
+  traefik:
+    image: traefik:v3.0
+    container_name: omega_traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=admin@omega.dev"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt_data:/letsencrypt
+    networks:
+      - omega_network
+    restart: unless-stopped
+    profiles:
+      - production
+
+# --- NETWORKS & VOLUMES ---
 networks:
   omega_network:
     driver: bridge
+    name: omega_network
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
 volumes:
-  mongo_data:
-    driver: local
   redis_data:
     driver: local
+  registry_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+  letsencrypt_data:
+    driver: local
+
+# --- DEPLOYMENT PROFILES ---
+# Usage Examples:
+# Development: docker-compose up
+# With Monitoring: docker-compose --profile monitoring up
+# Full Production: docker-compose --profile production --profile monitoring up

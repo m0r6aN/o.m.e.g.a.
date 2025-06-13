@@ -1,0 +1,198 @@
+version: '3.8'
+
+# The OMEGA Agent Constellation - Enterprise Edition! 🚀🌟
+# Production-ready deployment with security, monitoring, and scalability
+
+services:
+  # --- CORE INFRASTRUCTURE ---
+  redis:
+    image: redis:7-alpine
+    container_name: omega_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - omega_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  agent_registry:
+    build:
+      context: ./src/omega/services/agent_registry
+      dockerfile: Dockerfile
+    container_name: omega_agent_registry
+    ports:
+      - "9401:9401"
+    environment:
+      - PORT=9401
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - omega_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9401/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # --- AGENT TEMPLATE (with our improved structure) ---
+  orchestrator:
+    build:
+      context: ./src
+      dockerfile: ./omega/agents/orchestrator/Dockerfile
+      args:
+        - AGENT_NAME=orchestrator
+    container_name: omega_orchestrator
+    ports:
+      - "9000:9000"  # API port
+      - "9001:9001"  # MCP port
+    environment:
+      - AGENT_NAME=orchestrator
+      - PORT=9000
+      - MCP_PORT=9001
+      - DOCKER_SERVICE_NAME=orchestrator
+      - REGISTRY_URL=http://agent_registry:9401
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - HEARTBEAT_INTERVAL=30
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    depends_on:
+      agent_registry:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:9000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # --- CODE GENERATOR (Our code-slinging cowboy) ---
+  code_generator:
+    build:
+      context: ./src
+      dockerfile: ./omega/agents/code_generator/Dockerfile
+      args:
+        - AGENT_NAME=code_generator
+    container_name: omega_code_generator
+    ports:
+      - "9014:9014"
+      - "9015:9015"
+    environment:
+      - AGENT_NAME=code_generator
+      - PORT=9014
+      - MCP_PORT=9015
+      - DOCKER_SERVICE_NAME=code_generator
+      - REGISTRY_URL=http://agent_registry:9401
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CONTEXT7_API_KEY=${CONTEXT7_API_KEY}  # For up-to-date docs
+    depends_on:
+      agent_registry:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omega_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:9014/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # --- CAPABILITY MATCHER (The matchmaker) ---
+  capability_matcher:
+    build:
+      context: ./src
+      dockerfile: ./omega/agents/capability_matcher/Dockerfile
+      args:
+        - AGENT_NAME=capability_matcher
+    container_name: omega_capability_matcher
+    ports:
+      - "9008:9008"
+      - "9009:9009"
+    environment:
+      - AGENT_NAME=capability_matcher
+      - PORT=9008
+      - MCP_PORT=9009
+      - DOCKER_SERVICE_NAME=capability_matcher
+      - REGISTRY_URL=http://agent_registry:9401
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      agent_registry:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omega_network
+    restart: unless-stopped
+
+  # --- MCP TOOLS SECTION ---
+  calculator_tool:
+    build:
+      context: ./src
+      dockerfile: ./omega/tools/calculator/Dockerfile
+    container_name: omega_calculator_tool
+    ports:
+      - "9202:9202"
+    environment:
+      - PORT=9202
+      - TOOL_NAME=calculator
+      - REGISTRY_URL=http://agent_registry:9401
+    depends_on:
+      agent_registry:
+        condition: service_healthy
+    networks:
+      - omega_network
+    restart: unless-stopped
+
+  # --- FRONTEND UI ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: omega_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:9401
+      - NEXT_PUBLIC_WS_URL=ws://localhost:9401
+    depends_on:
+      - agent_registry
+    networks:
+      - omega_network
+    restart: unless-stopped
+
+# --- NETWORKS & VOLUMES ---
+networks:
+  omega_network:
+    driver: bridge
+    name: omega_network
+
+volumes:
+  redis_data:
+    driver: local
+
+# --- DEPLOYMENT PROFILES ---
+# Usage: docker-compose --profile development up
+# Usage: docker-compose --profile production up
+profiles:
+  - development
+  - production

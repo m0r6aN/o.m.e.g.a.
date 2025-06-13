@@ -22,13 +22,13 @@ class MessageIntent(str, Enum):
 
 class BaseMessage(BaseModel):
     type: MessageIntent = Field(..., description="Message type identifier")
-    timestamp: datetime.datetime = Field(
+    timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="UTC timestamp"
     )
     
     model_config = {
-        "json_encoders": {datetime.datetime: lambda v: v.isoformat()}
+        "json_encoders": {datetime: lambda v: v.isoformat()}
     }
 
     def serialize(self) -> str:
@@ -68,5 +68,4 @@ class AgentMessage(BaseModel):
     reasoning_effort: ReasoningEffort  # Complexity assessment
     tools_used: List[str]  # Tools utilized in response
     references: List[Dict]  # Citations and references
-    timestamp: datetime.datetime
-    
+    timestamp: datetime

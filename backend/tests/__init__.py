@@ -1,2 +1,2 @@
-""" backend_v2.tests Init """
-# This makes backend_v2.tests a package
+""" Omega Tests Init """
+# This makes omega.tests a package

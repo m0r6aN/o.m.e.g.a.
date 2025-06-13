@@ -15,18 +15,12 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
 # Assuming models are in backend.models.models
-from omega.core.models.models import (
-    ReasoningStrategy,
-    Task,
-    MessageIntent,
-    TaskEvent,
-    TaskOutcome,
-    ReasoningEffort,
-    get_reasoning_strategy,
-)
-# Assuming logger is in backend.core.config
+from omega.core.models.reasoning import ReasoningStrategy
+
+from omega.core.models.message import MessageIntent
+from omega.core.models.task_models import TaskEvent, ReasoningEffort, TaskCore
+from omega.core.models.reasoning import get_reasoning_strategy
 from omega.core.config import logger
-# Import from sibling modules in the same package
 from .tool_cache import ToolCache
 
 
@@ -97,7 +91,7 @@ class TaskFactory:
     }
 
     @classmethod
-    async def prepare_tools_for_task(cls, task: Task, redis_client) -> Task:
+    async def prepare_tools_for_task(cls, task: TaskCore, redis_client) -> TaskCore:
         """Preload likely needed tools for a task and attach to metadata"""
         if not task.metadata:
             task.metadata = {}
@@ -793,7 +787,7 @@ class TaskFactory:
         priority: Optional[int] = None, # Keep optional
         deadline_pressure: Optional[float] = None, # Keep optional
         redis_client = None # Keep optional for tool prep
-    ) -> Tuple[Task, Dict]:
+    ) -> Tuple[TaskCore, Dict]:
         """
         Create a Task object with dynamically estimated reasoning effort using TaskFactory's enhanced logic.
         Returns both the Task object and diagnostic information about the reasoning effort estimation.
@@ -830,7 +824,7 @@ class TaskFactory:
         reasoning_strategy = ReasoningStrategy(get_reasoning_strategy(reasoning_effort))
 
         # Create the task instance
-        task = Task(
+        task = TaskCore(
             type="task",  # Set type for BaseMessage compatibility
             task_id=task_id,
             agent=agent,

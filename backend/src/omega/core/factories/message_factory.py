@@ -9,7 +9,7 @@ from typing import Optional
 import uuid
 
 # Assuming models are in backend.models.models
-from omega.core.models.models import Message, MessageIntent
+from omega.core.models.message import Message, MessageIntent
 # Assuming logger is in backend.core.config
 from omega.core.config import logger
 

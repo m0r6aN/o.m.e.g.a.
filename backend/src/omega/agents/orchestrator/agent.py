@@ -1,383 +1,568 @@
-import os
-import json
-import uuid
+# /omega/agents/orchestrator/agent.py
+"""
+OMEGA Orchestrator Agent V2.0 - The Central Command 🚀
+Built on the EnhancedBaseAgent foundation for enterprise-grade operation.
+
+This is the Tony Stark of our agent constellation - the strategic mastermind
+that coordinates all other agents to achieve complex objectives.
+"""
+
 import asyncio
-from typing import Dict, Any, List, Optional
-from fastmcp.decorators import tool
-from omega.core.models.task_models import TaskCore, TaskHeader, TaskStatus, TaskEnvelope, TaskEvent
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 
-# Import the RegisterableDualModeAgent base class
-from registerable_dual_mode_agent import RegisterableDualModeAgent
+from omega.core.agents.enhanced_base_agent import EnhancedBaseAgent
+from omega.core.models.task_models import TaskEnvelope, TaskStatus, Task
+from omega.core.agent_discovery import AgentCapability
+from omega.core.utils.llm_adapter import LLMAdapter
 
-@tool
-def execute_workflow(workflow_request: Dict[str, Any]) -> Dict[str, Any]:
+class OrchestratorAgent(EnhancedBaseAgent):
     """
-    Execute a multi-step workflow based on a high-level request.
+    The Orchestrator Agent - Central Command for OMEGA operations.
     
-    Args:
-        workflow_request: Dictionary containing the workflow request details
-            {
-                "request": "The natural language request to process",
-                "options": {
-                    "max_parallel_tasks": 5,
-                    "priority": "speed|quality",
-                    "max_confidence_threshold": 0.7
-                }
-            }
-            
-    Returns:
-        Dictionary containing workflow execution results
-    """
-    # This is just a stub - the real implementation happens in the agent
-    return {"status": "accepted", "workflow_id": str(uuid.uuid4())}
-
-@tool
-def get_workflow_status(workflow_id: str) -> Dict[str, Any]:
-    """
-    Get the current status of a workflow execution.
-    
-    Args:
-        workflow_id: The ID of the workflow to check
-        
-    Returns:
-        Dictionary containing the current workflow status
-    """
-    # This is just a stub - the real implementation happens in the agent
-    return {"status": "unknown", "workflow_id": workflow_id}
-
-class OrchestratorAgent(RegisterableDualModeAgent):
-    """
-    Master orchestrator agent that coordinates the entire OMEGA framework.
-    
-    This agent:
-    1. Receives user requests
-    2. Sends them to the PromptOptimizer
-    3. Forwards optimized prompts to the WorkflowPlanner
-    4. Tracks execution of all subtasks
-    5. Aggregates results and provides status updates
+    Responsibilities:
+    - Workflow decomposition and planning
+    - Agent coordination and task delegation
+    - Progress monitoring and error recovery
+    - Result aggregation and synthesis
+    - Strategic decision making
     """
     
     def __init__(self):
+        # Define orchestrator capabilities
+        capabilities = [
+            AgentCapability(
+                name="workflow_orchestration",
+                description="Decomposes complex tasks into agent-specific subtasks and coordinates execution",
+                confidence=0.95,
+                category="coordination"
+            ),
+            AgentCapability(
+                name="task_delegation",
+                description="Intelligently assigns tasks to the most capable agents based on requirements",
+                confidence=0.90,
+                category="management"
+            ),
+            AgentCapability(
+                name="progress_monitoring",
+                description="Tracks task progress and handles failures or delays in real-time",
+                confidence=0.85,
+                category="monitoring"
+            ),
+            AgentCapability(
+                name="result_synthesis",
+                description="Aggregates and synthesizes results from multiple agents into cohesive outcomes",
+                confidence=0.88,
+                category="synthesis"
+            ),
+            AgentCapability(
+                name="strategic_planning",
+                description="Makes high-level strategic decisions about workflow execution and optimization",
+                confidence=0.82,
+                category="strategy"
+            )
+        ]
+        
         super().__init__(
-            agent_id="orchestrator",
-            tool_name="orchestrator",
-            description="Main orchestrator that coordinates all agents and tools in the OMEGA framework",
-            version="1.0.0",
-            skills=["execute_workflow", "get_workflow_status", "orchestrate_agents"],
-            agent_type="agent",
-            tags=["orchestration", "workflow", "coordination"]
+            agent_id="orchestrator_001",
+            name="OMEGA Orchestrator",
+            description="Central command agent for coordinating complex multi-agent workflows and strategic planning",
+            capabilities=capabilities,
+            port=9000,
+            mcp_port=9001,
+            version="2.0.0"
         )
         
-        # Register the MCP tools
-        self.mcp.add_tool(execute_workflow)
-        self.mcp.add_tool(get_workflow_status)
+        # Orchestrator-specific state
+        self.active_workflows: Dict[str, Dict[str, Any]] = {}
+        self.agent_capabilities_cache: Dict[str, List[AgentCapability]] = {}
+        self.workflow_templates: Dict[str, Dict[str, Any]] = {}
         
-        # Workflow tracking
-        self.active_workflows = {}
-        self.completed_subtasks = {}
+        # Enhanced LLM configuration for strategic thinking
+        self.strategic_llm = LLMAdapter(
+            model="gpt-4",  # Use the big guns for orchestration
+            temperature=0.1,  # Low temperature for consistent strategic decisions
+            max_tokens=4000
+        )
 
-    async def handle_task(self, env: TaskEnvelope) -> TaskEnvelope:
+    async def handle_task(self, envelope: TaskEnvelope) -> TaskEnvelope:
         """
-        Process a task envelope containing a request or status update.
+        The cognitive core - orchestrates complex workflows with strategic intelligence.
+        """
+        task = envelope.task
         
-        Args:
-            env: Task envelope with the request or update
-            
-        Returns:
-            Updated task envelope with results
-        """
         try:
-            # Check if this is a new workflow request or a subtask update
-            if env.header.conversation_id in self.active_workflows:
-                # This is a subtask update for an existing workflow
-                return await self._handle_subtask_update(env)
+            # Log the incoming task
+            print(f"🎯 Orchestrator received task: {task.name}")
+            
+            # Determine the orchestration strategy
+            strategy = await self._determine_strategy(task)
+            
+            # Execute based on strategy type
+            if strategy["type"] == "single_agent":
+                result = await self._delegate_to_single_agent(task, strategy)
+            elif strategy["type"] == "sequential_workflow":
+                result = await self._execute_sequential_workflow(task, strategy)
+            elif strategy["type"] == "parallel_workflow":
+                result = await self._execute_parallel_workflow(task, strategy)
+            elif strategy["type"] == "collaborative_workflow":
+                result = await self._execute_collaborative_workflow(task, strategy)
             else:
-                # This is a new workflow request
-                return await self._handle_new_workflow(env)
-                
+                result = await self._handle_direct_execution(task)
+            
+            # Update the envelope with results
+            envelope.task.payload.update(result)
+            envelope.header.status = TaskStatus.COMPLETED
+            envelope.header.completed_at = datetime.utcnow()
+            
+            print(f"✅ Orchestrator completed task: {task.name}")
+            return envelope
+            
         except Exception as e:
-            # Handle errors
-            print(f"❌ Error in OrchestratorAgent: {e}")
-            env.header.status = TaskStatus.FAILED
-            env.header.last_event = TaskEvent.FAIL
-            env.task.payload["error"] = str(e)
-            return env
+            print(f"❌ Orchestrator failed on task {task.name}: {e}")
+            envelope.header.status = TaskStatus.FAILED
+            envelope.header.error = str(e)
+            envelope.task.payload["error"] = str(e)
+            return envelope
 
-    async def _handle_new_workflow(self, env: TaskEnvelope) -> TaskEnvelope:
+    async def _determine_strategy(self, task: Task) -> Dict[str, Any]:
         """
-        Handle a new workflow request by sending it through the optimization
-        and planning pipeline.
-        
-        Args:
-            env: Task envelope with the new workflow request
-            
-        Returns:
-            Updated task envelope with initial workflow status
+        Uses AI to analyze the task and determine the optimal orchestration strategy.
         """
-        # Generate a workflow ID if not already present
-        workflow_id = env.header.conversation_id or str(uuid.uuid4())
-        env.header.conversation_id = workflow_id
+        # Analyze task complexity and requirements
+        analysis_prompt = f"""
+        Analyze this task and determine the optimal orchestration strategy:
         
-        # Initialize workflow tracking
-        self.active_workflows[workflow_id] = {
-            "status": "INITIALIZING",
-            "request": env.task.description,
-            "start_time": asyncio.get_event_loop().time(),
-            "subtasks": {},
-            "results": {}
-        }
+        Task: {task.name}
+        Description: {task.description}
+        Requirements: {task.payload.get('requirements', 'None specified')}
         
-        # Step 1: Find the PromptOptimizer agent
-        prompt_optimizer = await self._find_agent_by_id("prompt_optimizer")
-        if not prompt_optimizer:
-            raise Exception("PromptOptimizer agent not found")
-            
-        # Step 2: Create a new task for the PromptOptimizer
-        optimizer_env = TaskEnvelope(
-            header=TaskHeader(
-                conversation_id=workflow_id,
-                sender=self.agent_id,
-                assigned_agent="prompt_optimizer",
-                status=TaskStatus.NEW,
-                confidence=1.0,
-                last_event=TaskEvent.SUBMIT,
-                history=[],
-            ),
-            task=TaskCore(
-                id=f"{workflow_id}-optimize",
-                name="Optimize user request",
-                description=env.task.description,
-                category="prompt_optimization",
-                required_capabilities=["optimize_prompt"],
-                dependencies=[],
-                parallelizable=False,
-                payload=env.task.payload or {}
-            )
-        )
+        Available strategies:
+        1. single_agent - Delegate to one specialized agent
+        2. sequential_workflow - Chain of dependent tasks
+        3. parallel_workflow - Independent tasks that can run simultaneously  
+        4. collaborative_workflow - Agents work together iteratively
         
-        # Step 3: Send the task to the PromptOptimizer's inbox
-        await self.redis.xadd(
-            "prompt_optimizer.inbox",
-            {"payload": optimizer_env.model_dump_json()}
-        )
+        Consider:
+        - Task complexity and scope
+        - Dependencies between subtasks
+        - Opportunities for parallelization
+        - Need for agent collaboration
         
-        # Update the original task envelope with workflow info
-        env.header.last_event = TaskEvent.ACCEPT
-        env.header.status = TaskStatus.IN_PROGRESS
-        env.task.payload = env.task.payload or {}
-        env.task.payload["workflow_id"] = workflow_id
-        env.task.payload["status"] = "Optimization in progress"
-        
-        # Return the updated envelope
-        return env
-
-    async def _handle_subtask_update(self, env: TaskEnvelope) -> TaskEnvelope:
+        Respond with a JSON strategy including:
+        - type: strategy type
+        - reasoning: explanation of choice
+        - agents_needed: list of agent types required
+        - estimated_duration: time estimate in minutes
+        - confidence: confidence in strategy (0-1)
         """
-        Handle updates from subtasks in an active workflow.
         
-        Args:
-            env: Task envelope with the subtask update
-            
-        Returns:
-            Updated task envelope with workflow status
-        """
-        workflow_id = env.header.conversation_id
-        task_id = env.task.id
-        
-        # Update workflow tracking
-        if workflow_id in self.active_workflows:
-            workflow = self.active_workflows[workflow_id]
-            
-            # Check if this is from the PromptOptimizer
-            if env.header.sender == "prompt_optimizer" and env.header.last_event == TaskEvent.COMPLETE:
-                # The prompt has been optimized, now send it to the WorkflowPlanner
-                return await self._forward_to_workflow_planner(env)
-            
-            # Check if this is from the WorkflowPlanner
-            elif env.header.sender == "workflow_planner" and env.header.last_event == TaskEvent.COMPLETE:
-                # The workflow has been planned, update status
-                workflow["status"] = "EXECUTING"
-                workflow["plan"] = env.task.payload.get("workflow", {})
-                
-                # Return updated status
-                env.task.payload["status"] = "Workflow execution in progress"
-                return env
-            
-            # This is a regular subtask update
-            elif task_id in workflow["subtasks"]:
-                # Update the subtask status
-                workflow["subtasks"][task_id] = {
-                    "status": env.header.status,
-                    "last_event": env.header.last_event,
-                    "result": env.task.payload
-                }
-                
-                # Check if this completed a subtask
-                if env.header.status == TaskStatus.COMPLETED:
-                    self.completed_subtasks[task_id] = True
-                    
-                    # Check if all subtasks are complete
-                    if self._check_workflow_completion(workflow_id):
-                        # All subtasks are complete, mark workflow as complete
-                        workflow["status"] = "COMPLETED"
-                        workflow["end_time"] = asyncio.get_event_loop().time()
-                        
-                        # Aggregate results
-                        aggregated_results = self._aggregate_workflow_results(workflow_id)
-                        
-                        # Update the envelope with final results
-                        env.header.last_event = TaskEvent.COMPLETE
-                        env.header.status = TaskStatus.COMPLETED
-                        env.task.payload["status"] = "Workflow completed"
-                        env.task.payload["results"] = aggregated_results
-                
-                return env
-        
-        # If we get here, something went wrong
-        env.header.last_event = TaskEvent.FAIL
-        env.header.status = TaskStatus.FAILED
-        env.task.payload["error"] = f"Workflow {workflow_id} not found or invalid update"
-        return env
-
-    async def _forward_to_workflow_planner(self, env: TaskEnvelope) -> TaskEnvelope:
-        """
-        Forward an optimized prompt to the WorkflowPlanner agent.
-        
-        Args:
-            env: Task envelope with the optimized prompt
-            
-        Returns:
-            Updated task envelope with workflow status
-        """
-        workflow_id = env.header.conversation_id
-        
-        # Find the WorkflowPlanner agent
-        workflow_planner = await self._find_agent_by_id("workflow_planner")
-        if not workflow_planner:
-            raise Exception("WorkflowPlanner agent not found")
-            
-        # Create a new task for the WorkflowPlanner
-        planner_env = TaskEnvelope(
-            header=TaskHeader(
-                conversation_id=workflow_id,
-                sender=self.agent_id,
-                assigned_agent="workflow_planner",
-                status=TaskStatus.NEW,
-                confidence=1.0,
-                last_event=TaskEvent.SUBMIT,
-                history=[],
-            ),
-            task=TaskCore(
-                id=f"{workflow_id}-plan",
-                name="Plan workflow execution",
-                description=env.task.description,
-                category="workflow_planning",
-                required_capabilities=["plan_workflow"],
-                dependencies=[],
-                parallelizable=False,
-                payload={
-                    "optimized_prompt": env.task.payload.get("optimized_prompt", {})
-                }
-            )
-        )
-        
-        # Send the task to the WorkflowPlanner's inbox
-        await self.redis.xadd(
-            "workflow_planner.inbox",
-            {"payload": planner_env.model_dump_json()}
-        )
-        
-        # Update the workflow status
-        workflow = self.active_workflows[workflow_id]
-        workflow["status"] = "PLANNING"
-        workflow["optimized_prompt"] = env.task.payload.get("optimized_prompt", {})
-        
-        # Update the original task envelope
-        env.header.last_event = TaskEvent.FORWARD
-        env.task.payload["status"] = "Workflow planning in progress"
-        
-        return env
-
-    def _check_workflow_completion(self, workflow_id: str) -> bool:
-        """
-        Check if all subtasks in a workflow have been completed.
-        
-        Args:
-            workflow_id: The ID of the workflow to check
-            
-        Returns:
-            True if all subtasks are complete, False otherwise
-        """
-        workflow = self.active_workflows.get(workflow_id)
-        if not workflow:
-            return False
-            
-        # Get all subtasks from the workflow plan
-        all_tasks = set(workflow.get("plan", {}).get("tasks", {}).keys())
-        if not all_tasks:
-            return False
-            
-        # Check if all tasks are in the completed list
-        return all(task_id in self.completed_subtasks for task_id in all_tasks)
-
-    def _aggregate_workflow_results(self, workflow_id: str) -> Dict[str, Any]:
-        """
-        Aggregate results from all subtasks in a completed workflow.
-        
-        Args:
-            workflow_id: The ID of the completed workflow
-            
-        Returns:
-            Dictionary containing aggregated results
-        """
-        workflow = self.active_workflows.get(workflow_id)
-        if not workflow:
-            return {"error": "Workflow not found"}
-            
-        # Collect all subtask results
-        results = {}
-        for task_id, task_info in workflow["subtasks"].items():
-            results[task_id] = task_info.get("result", {})
-            
-        # Calculate execution time
-        execution_time = workflow.get("end_time", 0) - workflow.get("start_time", 0)
-            
-        return {
-            "workflow_id": workflow_id,
-            "execution_time": execution_time,
-            "status": workflow["status"],
-            "optimized_prompt": workflow.get("optimized_prompt", {}),
-            "plan": workflow.get("plan", {}),
-            "subtask_results": results
-        }
-
-    async def _find_agent_by_id(self, agent_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Find an agent in the registry by its ID.
-        
-        Args:
-            agent_id: The ID of the agent to find
-            
-        Returns:
-            Agent information or None if not found
-        """
         try:
-            agents = await self.discover_agents()
-            for agent in agents:
-                if agent.get("id") == agent_id:
-                    return agent
+            response = await self.strategic_llm.complete(analysis_prompt)
+            strategy = self._parse_strategy_response(response)
+            return strategy
+        except Exception as e:
+            print(f"⚠️ Strategy analysis failed, falling back to simple delegation: {e}")
+            return {
+                "type": "single_agent",
+                "reasoning": "Fallback due to analysis failure",
+                "agents_needed": ["code_generator"],  # Safe default
+                "estimated_duration": 5,
+                "confidence": 0.5
+            }
+
+    def _parse_strategy_response(self, response: str) -> Dict[str, Any]:
+        """Parse the LLM response into a structured strategy."""
+        try:
+            import json
+            # Extract JSON from response (handle markdown code blocks)
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                json_str = response.split("```")[1].split("```")[0].strip()
+            else:
+                json_str = response.strip()
+            
+            return json.loads(json_str)
+        except Exception as e:
+            print(f"⚠️ Failed to parse strategy response: {e}")
+            return {
+                "type": "single_agent",
+                "reasoning": "Parsing fallback",
+                "agents_needed": ["code_generator"],
+                "estimated_duration": 5,
+                "confidence": 0.3
+            }
+
+    async def _delegate_to_single_agent(self, task: Task, strategy: Dict[str, Any]) -> Dict[str, Any]:
+        """Delegate to the most appropriate single agent."""
+        agent_type = strategy["agents_needed"][0]
+        
+        # Find the best agent for this task
+        best_agent = await self._find_best_agent(agent_type, task)
+        
+        if not best_agent:
+            return {"error": f"No suitable {agent_type} agent found"}
+        
+        # Send task to the selected agent
+        result = await self._send_task_to_agent(best_agent["id"], task)
+        
+        return {
+            "strategy": "single_agent_delegation",
+            "agent_used": best_agent["id"],
+            "result": result
+        }
+
+    async def _execute_sequential_workflow(self, task: Task, strategy: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a sequential workflow where each step depends on the previous."""
+        workflow_id = f"seq_{task.id}_{int(asyncio.get_event_loop().time())}"
+        self.active_workflows[workflow_id] = {
+            "type": "sequential",
+            "status": "running",
+            "steps": [],
+            "current_step": 0
+        }
+        
+        try:
+            # Break down the task into sequential steps
+            steps = await self._decompose_into_steps(task, "sequential")
+            results = []
+            
+            for i, step in enumerate(steps):
+                print(f"🔄 Executing step {i+1}/{len(steps)}: {step['name']}")
+                
+                # Find and execute with appropriate agent
+                agent = await self._find_best_agent(step["agent_type"], step)
+                if agent:
+                    step_result = await self._send_task_to_agent(agent["id"], step)
+                    results.append(step_result)
+                    
+                    # Update workflow state
+                    self.active_workflows[workflow_id]["current_step"] = i + 1
+                    self.active_workflows[workflow_id]["steps"].append({
+                        "step": step["name"],
+                        "agent": agent["id"],
+                        "result": step_result,
+                        "completed_at": datetime.utcnow().isoformat()
+                    })
+                else:
+                    raise Exception(f"No suitable agent found for step: {step['name']}")
+            
+            # Mark workflow as completed
+            self.active_workflows[workflow_id]["status"] = "completed"
+            
+            return {
+                "strategy": "sequential_workflow",
+                "workflow_id": workflow_id,
+                "steps_completed": len(steps),
+                "results": results
+            }
+            
+        except Exception as e:
+            self.active_workflows[workflow_id]["status"] = "failed"
+            raise e
+
+    async def _execute_parallel_workflow(self, task: Task, strategy: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute parallel tasks that can run simultaneously."""
+        workflow_id = f"par_{task.id}_{int(asyncio.get_event_loop().time())}"
+        
+        # Decompose into parallel tasks
+        parallel_tasks = await self._decompose_into_steps(task, "parallel")
+        
+        # Create coroutines for each parallel task
+        task_coroutines = []
+        for subtask in parallel_tasks:
+            agent = await self._find_best_agent(subtask["agent_type"], subtask)
+            if agent:
+                coro = self._send_task_to_agent(agent["id"], subtask)
+                task_coroutines.append(coro)
+        
+        # Execute all tasks in parallel
+        print(f"🚀 Executing {len(task_coroutines)} parallel tasks...")
+        results = await asyncio.gather(*task_coroutines, return_exceptions=True)
+        
+        # Process results and handle any exceptions
+        successful_results = []
+        failed_results = []
+        
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                failed_results.append({
+                    "task": parallel_tasks[i]["name"],
+                    "error": str(result)
+                })
+            else:
+                successful_results.append(result)
+        
+        return {
+            "strategy": "parallel_workflow",
+            "workflow_id": workflow_id,
+            "successful_tasks": len(successful_results),
+            "failed_tasks": len(failed_results),
+            "results": successful_results,
+            "failures": failed_results
+        }
+
+    async def _execute_collaborative_workflow(self, task: Task, strategy: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute collaborative workflow where agents work together iteratively."""
+        workflow_id = f"collab_{task.id}_{int(asyncio.get_event_loop().time())}"
+        
+        # This is where agents would engage in back-and-forth collaboration
+        # For now, implementing a simplified version
+        
+        agents_needed = strategy["agents_needed"]
+        collaboration_rounds = 3  # Number of iteration rounds
+        
+        current_result = {"content": task.description}
+        
+        for round_num in range(collaboration_rounds):
+            print(f"🤝 Collaboration round {round_num + 1}/{collaboration_rounds}")
+            
+            round_results = []
+            for agent_type in agents_needed:
+                agent = await self._find_best_agent(agent_type, task)
+                if agent:
+                    # Create a collaborative task with current context
+                    collab_task = Task(
+                        id=f"{task.id}_collab_{round_num}_{agent_type}",
+                        name=f"Collaborative input from {agent_type}",
+                        description=f"Provide {agent_type} perspective on: {current_result['content']}",
+                        payload={"context": current_result, "round": round_num}
+                    )
+                    
+                    result = await self._send_task_to_agent(agent["id"], collab_task)
+                    round_results.append(result)
+            
+            # Synthesize results from this round
+            current_result = await self._synthesize_collaborative_results(round_results, round_num)
+        
+        return {
+            "strategy": "collaborative_workflow",
+            "workflow_id": workflow_id,
+            "collaboration_rounds": collaboration_rounds,
+            "final_result": current_result
+        }
+
+    async def _handle_direct_execution(self, task: Task) -> Dict[str, Any]:
+        """Handle tasks that the orchestrator can execute directly."""
+        # Simple orchestrator-level tasks (status checks, simple queries, etc.)
+        
+        if "status" in task.name.lower():
+            return await self._get_system_status()
+        elif "agents" in task.name.lower() and "list" in task.name.lower():
+            return await self._list_available_agents()
+        else:
+            return {
+                "strategy": "direct_execution",
+                "result": f"Orchestrator processed: {task.name}",
+                "message": "Task handled directly by orchestrator"
+            }
+
+    async def _decompose_into_steps(self, task: Task, workflow_type: str) -> List[Dict[str, Any]]:
+        """Use AI to decompose a complex task into manageable steps."""
+        decomposition_prompt = f"""
+        Decompose this task into {workflow_type} steps:
+        
+        Task: {task.name}
+        Description: {task.description}
+        Workflow Type: {workflow_type}
+        
+        Available agent types:
+        - code_generator: Generates code in various languages
+        - research: Conducts research and gathers information
+        - prompt_optimizer: Optimizes prompts and requirements
+        - capability_matcher: Finds the right agent for tasks
+        - math_solver: Handles mathematical calculations
+        - project_architect: Designs system architecture
+        
+        Provide a JSON array of steps, each with:
+        - name: step name
+        - description: what needs to be done
+        - agent_type: which agent should handle this
+        - dependencies: which previous steps this depends on (for sequential)
+        - estimated_time: time estimate in minutes
+        
+        Focus on logical decomposition and proper agent assignment.
+        """
+        
+        try:
+            response = await self.strategic_llm.complete(decomposition_prompt)
+            steps = self._parse_steps_response(response)
+            return steps
+        except Exception as e:
+            print(f"⚠️ Task decomposition failed: {e}")
+            # Fallback to simple single-step delegation
+            return [{
+                "name": task.name,
+                "description": task.description,
+                "agent_type": "code_generator",
+                "dependencies": [],
+                "estimated_time": 5
+            }]
+
+    def _parse_steps_response(self, response: str) -> List[Dict[str, Any]]:
+        """Parse the LLM response into structured steps."""
+        try:
+            import json
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                json_str = response.split("```")[1].split("```")[0].strip()
+            else:
+                json_str = response.strip()
+            
+            return json.loads(json_str)
+        except Exception as e:
+            print(f"⚠️ Failed to parse steps response: {e}")
+            return []
+
+    async def _find_best_agent(self, agent_type: str, task: Any) -> Optional[Dict[str, Any]]:
+        """Find the best available agent of the specified type."""
+        try:
+            # Query the agent registry for available agents
+            response = await self.http_client.get(
+                f"{self.registry_url}/agents?type={agent_type}&status=active",
+                timeout=5.0
+            )
+            
+            if response.status_code == 200:
+                agents = response.json().get("agents", [])
+                if agents:
+                    # For now, return the first available agent
+                    # In the future, this could use sophisticated matching logic
+                    return agents[0]
+            
             return None
         except Exception as e:
-            print(f"❌ Error finding agent {agent_id}: {str(e)}")
+            print(f"⚠️ Failed to find agent of type {agent_type}: {e}")
             return None
 
-    def _register_a2a_capabilities(self):
-        """Register A2A capabilities"""
-        # For now, we'll just implement the basic required method
-        # Later we can add A2A skills if needed
-        pass
+    async def _send_task_to_agent(self, agent_id: str, task: Any) -> Dict[str, Any]:
+        """Send a task to a specific agent and wait for the result."""
+        try:
+            # Get agent details from registry
+            agent_response = await self.http_client.get(
+                f"{self.registry_url}/agents/{agent_id}",
+                timeout=5.0
+            )
+            
+            if agent_response.status_code != 200:
+                raise Exception(f"Agent {agent_id} not found in registry")
+            
+            agent_info = agent_response.json()
+            agent_url = f"http://{agent_info['host']}:{agent_info['port']}"
+            
+            # Create task envelope
+            envelope = TaskEnvelope(
+                task=task if isinstance(task, Task) else Task(**task),
+                header={
+                    "source_agent": self.id,
+                    "target_agent": agent_id,
+                    "created_at": datetime.utcnow(),
+                    "status": TaskStatus.PENDING
+                }
+            )
+            
+            # Send task to agent
+            response = await self.http_client.post(
+                f"{agent_url}/tasks",
+                json=envelope.model_dump(),
+                timeout=60.0  # Give agents time to process
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                return result.get("task", {}).get("payload", {})
+            else:
+                raise Exception(f"Agent {agent_id} returned status {response.status_code}")
+                
+        except Exception as e:
+            print(f"❌ Failed to send task to agent {agent_id}: {e}")
+            return {"error": str(e)}
 
+    async def _synthesize_collaborative_results(self, results: List[Dict[str, Any]], round_num: int) -> Dict[str, Any]:
+        """Synthesize results from collaborative agents."""
+        synthesis_prompt = f"""
+        Synthesize these collaborative inputs from round {round_num + 1}:
+        
+        Results: {results}
+        
+        Create a cohesive synthesis that:
+        1. Combines the best insights from each input
+        2. Resolves any conflicts or contradictions
+        3. Builds toward a comprehensive solution
+        4. Maintains coherence and quality
+        
+        Return a JSON object with:
+        - content: the synthesized content
+        - insights: key insights discovered
+        - next_steps: what should happen in the next round
+        """
+        
+        try:
+            response = await self.strategic_llm.complete(synthesis_prompt)
+            return self._parse_synthesis_response(response)
+        except Exception as e:
+            print(f"⚠️ Synthesis failed: {e}")
+            return {
+                "content": f"Combined results from round {round_num + 1}",
+                "insights": ["Synthesis failed"],
+                "next_steps": ["Continue with available results"]
+            }
+
+    def _parse_synthesis_response(self, response: str) -> Dict[str, Any]:
+        """Parse synthesis response from LLM."""
+        try:
+            import json
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            else:
+                json_str = response.strip()
+            return json.loads(json_str)
+        except:
+            return {"content": response}
+
+    async def _get_system_status(self) -> Dict[str, Any]:
+        """Get comprehensive system status."""
+        try:
+            # Query registry for all agents
+            response = await self.http_client.get(f"{self.registry_url}/agents", timeout=5.0)
+            
+            if response.status_code == 200:
+                agents = response.json().get("agents", [])
+                
+                return {
+                    "system_status": "operational",
+                    "total_agents": len(agents),
+                    "active_agents": len([a for a in agents if a.get("status") == "active"]),
+                    "active_workflows": len(self.active_workflows),
+                    "orchestrator_uptime": asyncio.get_event_loop().time() - self.metrics.start_time
+                }
+            else:
+                return {"system_status": "degraded", "error": "Cannot reach agent registry"}
+        except Exception as e:
+            return {"system_status": "error", "error": str(e)}
+
+    async def _list_available_agents(self) -> Dict[str, Any]:
+        """List all available agents in the system."""
+        try:
+            response = await self.http_client.get(f"{self.registry_url}/agents", timeout=5.0)
+            
+            if response.status_code == 200:
+                agents = response.json().get("agents", [])
+                
+                return {
+                    "available_agents": agents,
+                    "count": len(agents),
+                    "agent_types": list(set(agent.get("type", "unknown") for agent in agents))
+                }
+            else:
+                return {"error": "Cannot reach agent registry"}
+        except Exception as e:
+            return {"error": str(e)}
+
+
+# Entry point for the agent
 if __name__ == "__main__":
-    print("🎯 OrchestratorAgent online (RegisterableDualMode + MCPServer)")
-    agent = OrchestratorAgent()
-    agent.run()
+    orchestrator = OrchestratorAgent()
+    orchestrator.run()

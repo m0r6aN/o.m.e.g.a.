@@ -1,21 +1,34 @@
-# Simple Dockerfile for agent_registry service
-FROM python:3.13-slim
+# OMEGA Agent Registry - Minimal Service
+FROM python:3.12.3-slim
 
+# Set working directory
 WORKDIR /app
 
-# Copy requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Set Python path
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
-# Copy the service file
-COPY service.py .
+# Install dependencies
+RUN pip install --no-cache-dir \
+    fastapi==0.115.0 \
+    uvicorn[standard]==0.30.0 \
+    redis==5.0.1 \
+    pydantic==2.8.0
 
-# Expose the port
-EXPOSE 9401
+# Copy service code
+COPY service.py /app/service.py
+
+# Create non-root user
+RUN groupadd -r omega && useradd -r -g omega omega
+RUN chown -R omega:omega /app
+USER omega
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:9401/health || exit 1
+    CMD python -c "import requests; requests.get('http://localhost:9401/health', timeout=5)" || exit 1
+
+# Expose port
+EXPOSE 9401
 
 # Run the service
 CMD ["python", "service.py"]

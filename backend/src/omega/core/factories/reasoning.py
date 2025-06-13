@@ -7,8 +7,11 @@ Core functionality for estimating reasoning effort based on content and context.
 from typing import Optional
 from enum import Enum
 
-# Assuming models are in backend.models.models
-from omega.core.models.models import ReasoningEffort, TaskEvent, MessageIntent
+# Assuming models are in backend.core.models
+from omega.core.models.reasoning import ReasoningEffort, ReasoningStrategy
+from omega.core.models.task_models import TaskEvent
+from omega.core.models.message import MessageIntent
+
 # Assuming logger is in backend.core.config
 from omega.core.config import logger
 

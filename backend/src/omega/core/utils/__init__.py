@@ -1,2 +1,2 @@
-""" Backend Init """
-# This makes backend a package
+""" Utils Init """
+# This makes utils a package

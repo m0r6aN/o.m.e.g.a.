@@ -1,4 +1,4 @@
-# OMEGA Orchestrator Agent - Enterprise Edition 🚀
+# OMEGA Agent Dockerfile - Enterprise Edition 🚀
 # Multi-stage build for maximum security and minimal size
 
 # --- STAGE 1: DEPENDENCY BUILDER ---
@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     git \
-    curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -30,14 +29,6 @@ FROM python:3.12.3-slim as runtime
 # Security: Create non-root user
 RUN groupadd -r omega && useradd -r -g omega -s /bin/bash omega
 
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y \
-    curl \
-    procps \
-    psutil \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
 # Copy virtual environment from builder stage
 COPY --from=dependencies /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -48,61 +39,55 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONHASHSEED=random \
     PYTHONPATH=/app
 
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    curl \
+    procps \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
 # Set working directory
 WORKDIR /app
 
 # Copy application code with proper ownership
 COPY --chown=omega:omega omega/ ./omega/
 
-# Create directories for logs and data with proper permissions
-RUN mkdir -p /app/logs /app/data /app/tmp && \
+# Create directories for logs and data
+RUN mkdir -p /app/logs /app/data && \
     chown -R omega:omega /app
 
 # Switch to non-root user for security
 USER omega
 
-# Health check with comprehensive validation
+# Health check with proper error handling and timeout
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "\
-import requests, sys, os, json; \
+import requests, sys, os; \
 try: \
-    port = os.getenv('PORT', '9000'); \
-    r = requests.get(f'http://localhost:{port}/health', timeout=5); \
-    health = r.json(); \
-    if r.status_code == 200 and health.get('status') in ['healthy', 'degraded']: \
-        print(f'✅ Orchestrator healthy: {health.get(\"agent_id\")}'); \
-        sys.exit(0); \
-    else: \
-        print(f'❌ Orchestrator unhealthy: {health}'); \
-        sys.exit(1); \
-except Exception as e: \
-    print(f'❌ Health check failed: {e}'); \
+    r = requests.get(f'http://localhost:{os.getenv(\"PORT\", \"9000\")}/health', timeout=5); \
+    sys.exit(0 if r.status_code == 200 else 1) \
+except: \
     sys.exit(1)"
 
-# Expose ports for API and MCP
-EXPOSE 9000 9001
+# Security: Run with minimal privileges
+# No need to expose ports here - docker-compose handles that
 
-# Graceful shutdown handling
+# Graceful shutdown handling - use exec form for proper signal propagation
 STOPSIGNAL SIGTERM
 
-# Set default environment variables
-ENV AGENT_NAME=orchestrator \
-    PORT=9000 \
-    MCP_PORT=9001 \
-    LOG_LEVEL=info
+# Dynamic execution based on build arg
+ARG AGENT_NAME
+ENV AGENT_NAME=${AGENT_NAME}
 
 # Professional module execution with proper signal handling
-CMD ["python", "-m", "omega.agents.orchestrator.agent"]
+CMD ["sh", "-c", "exec python -m omega.agents.${AGENT_NAME}.agent"]
 
 # --- METADATA ---
 LABEL maintainer="OMEGA Dream Team <omega@legendary.dev>"
 LABEL version="2.0.0"
-LABEL description="OMEGA Orchestrator Agent - Central Command"
-LABEL agent.name="orchestrator"
-LABEL agent.type="coordination"
-LABEL agent.capabilities="workflow_orchestration,task_delegation,progress_monitoring"
-LABEL org.opencontainers.image.title="OMEGA Orchestrator Agent"
-LABEL org.opencontainers.image.description="Central command agent for coordinating complex multi-agent workflows"
+LABEL description="Production-ready OMEGA Agent Container"
+LABEL org.opencontainers.image.title="OMEGA Agent"
+LABEL org.opencontainers.image.description="Orchestrated Multi-Expert Gen Agent"
 LABEL org.opencontainers.image.version="2.0.0"
 LABEL org.opencontainers.image.vendor="OMEGA Framework"
 LABEL org.opencontainers.image.licenses="MIT"

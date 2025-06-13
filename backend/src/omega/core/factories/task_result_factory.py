@@ -9,7 +9,8 @@ from typing import Optional, List
 import uuid
 
 # Assuming models are in backend.models.models
-from omega.core.models.models import TaskResult, TaskEvent, TaskOutcome, ReasoningEffort, MessageIntent
+from omega.core.models.task_models import TaskEvent, TaskOutcome, ReasoningEffort
+from omega.core.models.message import MessageIntent
 # Assuming logger is in backend.core.config
 from omega.core.config import logger
 # Import basic reasoning estimator from sibling module
@@ -32,9 +33,9 @@ class TaskResultFactory:
         reasoning_effort: Optional[ReasoningEffort] = None, # Can be passed if known, otherwise estimated
         result_id: Optional[str] = None, # Allow specifying ID
         timestamp: Optional[dt.datetime] = None
-    ) -> TaskResult:
+    ) -> TaskOutcome:
         """
-        Creates a TaskResult object. Estimates reasoning effort based on result content if not provided.
+        Creates a TaskOutcome object. Estimates reasoning effort based on result content if not provided.
         """
         res_id = result_id or str(uuid.uuid4())
         ts = timestamp or dt.datetime.now(dt.timezone.utc)
@@ -54,7 +55,7 @@ class TaskResultFactory:
             f"Effort={'Provided: ' + final_effort.value if reasoning_effort else 'Estimated: ' + final_effort.value}"
         )
 
-        return TaskResult(
+        return TaskOutcome(
             result_id=res_id,
             task_id=task_id,
             agent=agent,
